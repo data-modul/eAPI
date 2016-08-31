@@ -157,6 +157,14 @@ EApiBoardGetStringAEmul(
          *
          */
 
+    if(info == NULL)
+            EAPI_LIB_RETURN_ERROR(
+                        EApiBoardGetStringAEmul,
+                        EAPI_STATUS_UNSUPPORTED  ,
+                        "Unrecognised String ID"
+                        );
+
+
     *pBufLen=(uint32_t)strlen(info)+1;
 
     if(BufLenSav<*pBufLen)
@@ -166,7 +174,7 @@ EApiBoardGetStringAEmul(
 
     if(BufLenSav && (pBuffer!=NULL))
     {
-        memcpy(pBuffer, info, BufLenSav);
+        snprintf(pBuffer,BufLenSav,info);
         pBuffer[BufLenSav-1]='\0';
     }
 
