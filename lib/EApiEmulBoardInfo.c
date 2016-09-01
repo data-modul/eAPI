@@ -402,6 +402,10 @@ EApiBoardGetValueEmul(
         *pValue = (value * 3000) / 1000;
     else if(Id == EAPI_ID_HWMON_VOLTAGE_12V && value!=0xffffff)
         *pValue = (value * 10000) / 1000;
+    else if((Id == EAPI_ID_HWMON_CPU_TEMP ||
+             Id == EAPI_ID_HWMON_CHIPSET_TEMP ||
+             Id == EAPI_ID_HWMON_SYSTEM_TEMP ) && value!=0xffffff)
+        *pValue = (value + 273150)/100; //mCelcius + (273.15*1000)/100 =>0.1K
     else
         *pValue=value;
 
