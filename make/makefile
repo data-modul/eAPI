@@ -52,7 +52,6 @@ endif
 AR = ar
 RANLIB = ranlib
 ARFLAGS = -ruv
-InstallDir=/usr/lib
 
 BinFolder=./bin/$(ARCH)/$(MACH)/rel
 DBinFolder=./bin/$(ARCH)/$(MACH)/dbg
@@ -61,6 +60,13 @@ DBuildDir=./build/$(MACH)/dbg
 PrgFldr=$(join $(shell pwd)/, ../lib)
 OalFldr=.
 EAPI_INC=../include/EApi.h
+
+$(info Default Install Directory is $(DIR). For changing please set DIR variable)
+DIR=/usr/local
+LIBDIR=$(DIR)/lib
+INCDIR=$(DIR)/include
+Install_Inc=../include/*
+
 GET_VAR_FROM_CFILE=$(shell grep "$(2)" $(1) |sed -rn "s/^\#\s*define\s+$2\s+([0-9]+).*/\1/p")
 EAPI_VERSION=$(call GET_VAR_FROM_CFILE,$(EAPI_INC),EAPI_VER)
 EAPI_REVISION=$(call GET_VAR_FROM_CFILE,$(EAPI_INC),EAPI_REVISION)
@@ -214,13 +220,18 @@ $(DBuildDir)/%.o:$(PrgFldr)/%.cpp
 $(BuildDir)/%.o:$(PrgFldr)/%.cpp
 	$(call C_BUILD_RULE,$(RELOPT))
 
-$(InstallDir)/$(SoFName): $(DBinFolder)/$(SoFName)
+$(LIBDIR)/$(SoFName): $(DBinFolder)/$(SoFName)
 	cp --force $< $(@)
 	chmod 755 $(@)
 	ln --force --symbolic $(@) $(dir $(@))$(SoName)
 	ldconfig -n $(dir $(@))$(SoName)
+	mkdir -p $(INCDIR)
+	cp -a $(Install_Inc) $(INCDIR)/
 
-install: $(InstallDir)/$(SoFName)
+install: $(LIBDIR)/$(SoFName)
+
+
+
 
 .PHONY: clean
 .PHONY: help
