@@ -73,10 +73,10 @@ EAPI_VERSION=$(call GET_VAR_FROM_CFILE,$(EAPI_INC),EAPI_VER)
 EAPI_REVISION=$(call GET_VAR_FROM_CFILE,$(EAPI_INC),EAPI_REVISION)
 
 LibName:=EApi
-VPNPID:=PMG
 LibFName:=$(LibName).$(EAPI_VERSION).$(EAPI_REVISION).o
+SymLinkName:=lib$(LibName).so
 SoName:=lib$(LibName).so.$(EAPI_VERSION)
-SoFName:=lib$(LibName)$(VPNPID).so.$(EAPI_VERSION).$(EAPI_REVISION)
+SoFName:=lib$(LibName).so.$(EAPI_VERSION).$(EAPI_REVISION)
 StaticLibFName:=$(LibName).a
 
 #DBGOPT:=-gxcoff3
@@ -226,6 +226,7 @@ $(LIBDIR)/$(SoFName): $(DBinFolder)/$(SoFName)
 	cp --force $< $(@)
 	@chmod 755 $(@)
 	@ln --force --symbolic $(@) $(dir $(@))$(SoName)
+	@ln --force --symbolic $(@) $(dir $(@))$(SymLinkName)
 	@ldconfig -n $(dir $(@))$(SoName)
 	@mkdir -p $(INCDIR)
 	cp -a $(Install_Inc) $(INCDIR)/
@@ -238,6 +239,7 @@ install: $(LIBDIR)/$(SoFName)
 .PHONY: uninstall
 
 uninstall::
+	@rm -f $(LIBDIR)/$(SymLinkName)
 	@rm -f $(LIBDIR)/$(SoFName)
 	@rm -f $(LIBDIR)/$(SoName)
 	@rm -f $(INCDIR)/EApi*
