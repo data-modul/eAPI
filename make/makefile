@@ -61,10 +61,11 @@ PrgFldr=$(join $(shell pwd)/, ../lib)
 OalFldr=.
 EAPI_INC=../include/EApi.h
 
-$(info Default Install Directory is $(DIR). For changing please set DIR variable)
-DIR=/usr/local
-LIBDIR=$(DIR)/lib
-INCDIR=$(DIR)/include
+ifeq (,$(PREFIX))
+	PREFIX=/usr/local
+endif
+LIBDIR=$(PREFIX)/lib
+INCDIR=$(PREFIX)/include
 Install_Inc=../include/*
 
 GET_VAR_FROM_CFILE=$(shell grep "$(2)" $(1) |sed -rn "s/^\#\s*define\s+$2\s+([0-9]+).*/\1/p")
@@ -135,8 +136,7 @@ define CLEAN_BUILD_FOLDER
 endef
 
 define REMOVE_BIN_FILES
-@rm -f $(1)
-@rm -f $(basename $(1)).map
+@rm -f $(1)/*
 endef
 
 OBJECTS=EApiEmulGPIO.o \
@@ -221,35 +221,41 @@ $(BuildDir)/%.o:$(PrgFldr)/%.cpp
 	$(call C_BUILD_RULE,$(RELOPT))
 
 $(LIBDIR)/$(SoFName): $(DBinFolder)/$(SoFName)
+	$(info Default Install Directory is $(PREFIX). For changing please set\
+		PREFIX and run again.)
 	cp --force $< $(@)
-	chmod 755 $(@)
-	ln --force --symbolic $(@) $(dir $(@))$(SoName)
-	ldconfig -n $(dir $(@))$(SoName)
-	mkdir -p $(INCDIR)
+	@chmod 755 $(@)
+	@ln --force --symbolic $(@) $(dir $(@))$(SoName)
+	@ldconfig -n $(dir $(@))$(SoName)
+	@mkdir -p $(INCDIR)
 	cp -a $(Install_Inc) $(INCDIR)/
 
 install: $(LIBDIR)/$(SoFName)
 
 
-
-
 .PHONY: clean
 .PHONY: help
+.PHONY: uninstall
+
+uninstall::
+	@rm -f $(LIBDIR)/$(SoFName)
+	@rm -f $(LIBDIR)/$(SoName)
+	@rm -f $(INCDIR)/EApi*
 
 clean::
-	$(call REMOVE_BIN_FILES,$(DBuildDir)/$(SoFName))
-	$(call REMOVE_BIN_FILES,$(BuildDir)/$(SoFName))
+	$(call REMOVE_BIN_FILES,$(DBinFolder))
+	$(call REMOVE_BIN_FILES,$(BinFolder))
 	$(call CLEAN_BUILD_FOLDER,$(DBuildDir))
 	$(call CLEAN_BUILD_FOLDER,$(BuildDir))
 
 
 help::
-	@echo ###############################################################################
-	@echo #        Build Mak Files
-	@echo ###############################################################################
-	@echo # help
-	@echo # clean
-	@echo # quick
-	@echo # buildall
-	@echo #
+	$(info ###############################################################################)
+	$(info #        Build Make Files)
+	$(info ###############################################################################)
+	$(info # help)
+	$(info # clean)
+	$(info # quick)
+	$(info # buildall)
+	$(info #)
 

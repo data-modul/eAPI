@@ -1394,12 +1394,12 @@ EApiGPIOSetLevel(
 
 
 #include "EApiCOM0.h"    /* COMExpress Platform Specific ID Mappings   */
-#include "EApiTCA.h"     /* TCA Platform Specific ID Mappings          */
-#include "EApiETX.h"     /* ETX Platform Specific ID Mappings          */
-#include "EApiQ7.h"      /* Q Seven Platform Specific ID Mappings      */
-#include "EApiMOPS.h"    /* MOPS Platform Specific ID Mappings         */
-#include "EApiPISA.h"    /* PISA Platform Specific ID Mappings         */
-#include "EApiEPIC.h"    /* EPIC Platform Specific ID Mappings         */
+//#include "EApiTCA.h"     /* TCA Platform Specific ID Mappings          */
+//#include "EApiETX.h"     /* ETX Platform Specific ID Mappings          */
+//#include "EApiQ7.h"      /* Q Seven Platform Specific ID Mappings      */
+//#include "EApiMOPS.h"    /* MOPS Platform Specific ID Mappings         */
+//#include "EApiPISA.h"    /* PISA Platform Specific ID Mappings         */
+//#include "EApiEPIC.h"    /* EPIC Platform Specific ID Mappings         */
 #include "EApiDmo.h"	/* DMO Specific ID Mappings*/
 /****************************************************************************/
 
