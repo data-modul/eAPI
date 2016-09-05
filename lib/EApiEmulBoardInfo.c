@@ -36,7 +36,6 @@
 
 #include <EApiLib.h>
 #include <stdio.h>
-#include <linux/i2c-dev.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <dirent.h>
