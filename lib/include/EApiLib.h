@@ -112,7 +112,7 @@
 #endif
 
 #define EAPI_LIB_RETURN_SUCCESS(func, desc)  \
-	do {\
+    do {\
 		EAPI_FORMATED_MES('L', func, EAPI_STATUS_SUCCESS, desc);\
 		StatusCode = EAPI_STATUS_SUCCESS; \
 		goto ExitPoint; \

@@ -60,19 +60,17 @@ void __cdecl DebugMsg(__IN const char *const fmt, ...)
 }
 
 
-char* find_hwmon(void)
+void find_hwmon(char **result)
 {
     char s[NAME_MAX];
     struct dirent *de;
     DIR *dir;
     FILE *f;
     char sysfs[NAME_MAX], n[NAME_MAX];
-
     snprintf(sysfs,sizeof(HWMON_PATH),HWMON_PATH);
 
     if(!(dir = opendir(sysfs)))
         return NULL;
-
     /* go through the hwmons */
     while ((de = readdir(dir)) != NULL) {
 
@@ -80,7 +78,6 @@ char* find_hwmon(void)
             continue;
         if (!strcmp(de->d_name, ".."))
             continue;
-
         /* this should work for kernels 2.6.5 or higher and */
         /* is preferred because is unambiguous */
         sprintf(n, "%s/%s/name", sysfs, de->d_name);
@@ -92,7 +89,6 @@ char* find_hwmon(void)
         }
         if(f == NULL)
             return NULL;
-
             char *px;
 
             px = fgets(s, NAME_MAX, f);
@@ -101,19 +97,20 @@ char* find_hwmon(void)
                 fprintf(stderr, "%s: read error\n", n);
                 continue;
             }
-
             if ((px = strchr(s, '\n')) != NULL)
                 *px = 0;
 
-
             if(!strncmp(s, HWMON_NAME,sizeof(HWMON_NAME)))
+            {
+                *result = HWMON_NAME;
                 break;
+            }
             else
-                memset(s,'\0',NAME_MAX);
+                *result = NULL;
 
     }
     closedir(dir);
-    return de->d_name;
+    return;
 }
 
 EApiStatus_t 
@@ -136,11 +133,10 @@ EApiInitLib(){
   char * pBoradType;
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
 
-
-
   /* ********************************************** */
   /* Find Eeprom i2c-bus and read & fill the buffer */
   eeprom_bus = find_eeprom();
+  printf("!!!!!!!1eeprom bus is %d\n",eeprom_bus);
 
   // read eeprom
   eepromBuffer = (uint8_t*)calloc(EEPROM_SIZE, sizeof(uint8_t));
@@ -163,7 +159,6 @@ EApiInitLib(){
       sprintf(devname,"/dev/i2c-%d",eeprom_bus);
       i2cDescriptor = open(devname,O_RDWR);
   }
-
   if(i2cDescriptor < 0)
   {
       EAPI_LIB_RETURN_ERROR(
@@ -172,7 +167,6 @@ EApiInitLib(){
                   "Unrecognised Eeprom Address"
                   );
   }
-
   // set slave address : set working device
   if(ioctl(i2cDescriptor, I2C_SLAVE, EEPROM_DEVICE) < 0)
   {
@@ -210,7 +204,6 @@ EApiInitLib(){
       }
       close(i2cDescriptor);
   }
-
   /* ********************************************** */
   /* detect_board_type */
   pBoradType=(char *)malloc((NAME_MAX) * sizeof(char));
@@ -223,20 +216,12 @@ EApiInitLib(){
       borad_type = UNKNOWN;
   free(pBoradType);
 
-
   /* ********************************************** */
 /* find hwmon */
- hwname=(char *)malloc((10) * sizeof(char));
- EAPI_LIB_RETURN_ERROR_IF(
-             EApiInitLib,
-             (hwname==NULL),
-             EAPI_STATUS_ALLOC_ERROR,
-             "Error Allocating Memory"
-             );
-  strcpy(hwname ,find_hwmon());
-
-
-
+    hwname = NULL;
+    find_hwmon(&hwname);
+    if (!hwname)
+        printf("NO HWMON found\n");
 
     DebugMsg("#\n"
               "# Embedded API EApi\n"
@@ -261,8 +246,8 @@ EApiUninitLib(){
               "#\n"
             );
 
-    free(eepromBuffer);
-    free(hwname);
+    if (eepromBuffer != NULL)
+        free(eepromBuffer);
   if(OutputStream!=NULL&&OutputStream!=stdout&&OutputStream!=stderr){
     fclose(OutputStream);
   }

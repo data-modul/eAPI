@@ -34,7 +34,6 @@ struct i2c_adap *gather_i2c_busses(void)
     adapters = calloc(BUNCH, sizeof(struct i2c_adap));
     if (!adapters)
         return NULL;
-
     /* look in sysfs */
     /* First figure out where sysfs was mounted */
     if ((f = fopen("/proc/mounts", "r")) == NULL) {
@@ -51,7 +50,6 @@ struct i2c_adap *gather_i2c_busses(void)
     if (! foundsysfs) {
         goto done;
     }
-
     /* Bus numbers in i2c-adapter don't necessarily match those in
        i2c-dev and what we really care about are the i2c-dev numbers.
        Unfortunately the names are harder to get in i2c-dev */
@@ -118,6 +116,7 @@ found:
                     return NULL;
             }
 
+
             adapters[count].nr = i2cbus;
             adapters[count].name = strdup(s);
             if (adapters[count].name == NULL) {
@@ -147,7 +146,6 @@ int find_eeprom(void)
     struct i2c_adap *adapters = NULL;
     int count;
     int result = -1;
-
     adapters = gather_i2c_busses();
     if (adapters == NULL)
     {

@@ -57,7 +57,7 @@ uint32_t
 EApiInitLib();
 uint32_t
 EApiUninitLib();
-char* find_hwmon(void);
+void find_hwmon(char **result);
 EApiStatus_t read_eeprom(int eeprom_bus,char **pBuf);
 
 

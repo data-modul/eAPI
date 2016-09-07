@@ -698,7 +698,11 @@ EApiLibInitialize(void)
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EAPI_CHECK_NOT_INITIALIZED(EApiLibInitialize);
     Initialized=1;
+
+    printf("salam1\n");
     EApiInitLib();
+
+    printf("salam2\n");
     EAPI_LIB_RETURN_SUCCESS(EApiLibInitialize, "");
     EAPI_LIB_ASSERT_EXIT
 
