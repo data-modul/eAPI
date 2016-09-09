@@ -103,10 +103,8 @@
 
 #if (STRICT_VALIDATION > 1)
 #define EAPI_FORMATED_MES(type, func, err, desc) \
-	siFormattedMessage_SC(type, __FILE__, #func, __LINE__, \
-			(EApiStatus_t)(((uintptr_t)err)&UINT32_MAX), "%s\n", \
-			desc);
-
+    siFormattedMessage_SC(type, __FILE__, #func, __LINE__, \
+            (EApiStatus_t)(((uintptr_t)err)&UINT32_MAX), "%s\n", desc);
 #else
 #define EAPI_FORMATED_MES(type, func, err, desc)
 #endif

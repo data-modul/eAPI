@@ -234,7 +234,7 @@ uint8_t *eeprom_analyze(uint8_t *eeprom,uint8_t type, uint8_t reqIndex)
         endDBIndex = lenDBIndex + startDBIndex;
     } while (endDBIndex < EEPROM_SIZE);
 
-    printf("NOT found!!!\n");
-    memset(temp,'\0',100);
+    //memset(temp,'\0',100);
+    temp = NULL;
     return temp;
 }

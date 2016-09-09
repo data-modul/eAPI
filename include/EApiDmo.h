@@ -21,6 +21,6 @@
 extern uint8_t *eepromBuffer;
 extern int borad_type;
 extern char *hwname;
-
+extern char err[256];
 
 #endif // EAPIDMO_H

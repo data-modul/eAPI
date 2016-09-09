@@ -39,6 +39,7 @@
 #include <EApiI2c-dev.h>
 #include <fcntl.h>
 #include <sys/ioctl.h>
+ #include <errno.h>
 
 EApiStatus_t 
 EAPI_CALLTYPE 
@@ -116,14 +117,12 @@ EApiI2CWriteReadEmul(
 
     if (Addr <  0x03 || Addr > 0x77)
     {
-        printf("Error: Chip address out of range\n");
         EAPI_LIB_RETURN_ERROR(
                     EApiI2CWriteReadEmul,
                     EAPI_STATUS_NOT_FOUND,
-                    "Unrecognised I2C Address"
+                    "Chip address out of range"
                     );
     }
-
     if(EAPI_I2C_IS_10BIT_ADDR(Addr<<8)){
         LclAddr=Addr<<8;
         LclAddr|=*((uint8_t *)pWBuffer);
@@ -194,9 +193,9 @@ EApiI2CWriteReadEmul(
         else //no cmd
         {
             EAPI_LIB_RETURN_ERROR(
-                        EApiI2CWriteTransfer,
                         EApiI2CWriteReadEmul,
-                        "Error: Command is required."
+                        EAPI_STATUS_NOT_FOUND,
+                        "Proper Command is required."
                         );
         }
 
@@ -215,24 +214,22 @@ EApiI2CWriteReadEmul(
 
     if(i2cDescriptor < 0)
     {
-        printf("*********** Could not open i2c device %d \n",i2cbus);
+        snprintf(err,sizeof(err),"Unrecognised i2c device %d: %s\n ",i2cbus,strerror(errno));
         EAPI_LIB_RETURN_ERROR(
                     EApiI2CWriteReadEmul,
-                    EAPI_STATUS_UNSUPPORTED,
-                    "Unrecognised I2C ID"
-                    );
+                    EAPI_STATUS_NOT_FOUND,
+                   err);
     }
 
     // get funcs list
     int funcs;
     if(ioctl(i2cDescriptor, I2C_FUNCS, &funcs) < 0)
     {
-        printf("Error i2c_open\n");
+        snprintf(err,sizeof(err),"Unrecognised i2c funcs: %s\n",strerror(errno));
         EAPI_LIB_RETURN_ERROR(
                     EApiI2CWriteReadEmul,
                     EAPI_STATUS_NOT_FOUND,
-                    "Unrecognised I2C Address"
-                    );
+                    err);
     }
 
     // check for req funcs
@@ -246,13 +243,11 @@ EApiI2CWriteReadEmul(
     // set slave address : set working device
     if(ioctl(i2cDescriptor, I2C_SLAVE, LclAddr) < 0)
     {
-        printf("Failed to set slave address %d\n", LclAddr);
+        snprintf(err,sizeof(err),"Cannot set i2c slave ddress: %s\n",strerror(errno));
         EAPI_LIB_RETURN_ERROR(
                     EApiI2CWriteReadEmul,
                     EAPI_STATUS_NOT_FOUND,
-                    "Unrecognised I2C Address"
-                    );
-
+                    err);
     }
 
     //  write to the device
@@ -285,8 +280,18 @@ EApiI2CWriteReadEmul(
                 }
             }
             if (res < 0){
-                printf("Error: Write Failed\n");
-                break;
+                close(i2cDescriptor);
+
+                if (res == -ETIMEDOUT)
+                    EAPI_LIB_RETURN_ERROR(
+                                EApiI2CWriteReadEmul,
+                                EAPI_STATUS_TIMEOUT,
+                                "i2c writing failed: time-out");
+                else
+                    EAPI_LIB_RETURN_ERROR(
+                            EApiI2CWriteReadEmul,
+                            EAPI_STATUS_WRITE_ERROR,
+                            "i2c writing failed");
             }
             pWBuffer=((uint8_t *)pWBuffer)+1;
             daddress++;
@@ -298,8 +303,8 @@ EApiI2CWriteReadEmul(
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiI2CWriteReadEmul,
                     (iWrite != WriteBCnt) ,
-                    EAPI_STATUS_READ_ERROR,
-                    "Device Write Error"
+                    EAPI_STATUS_WRITE_ERROR,
+                    "i2c writing failed"
                     );
         EAPI_LIB_RETURN_SUCCESS(EApiI2CWriteReadEmul, "");
     }
@@ -324,31 +329,41 @@ EApiI2CWriteReadEmul(
             if (flag == 0 && no_add != 1 )
             {
                 if (size == I2C_SMBUS_BYTE_DATA)
-                {
                     res = i2c_smbus_write_byte_data(i2cDescriptor,(daddress >> 8) & 0x0ff, daddress & 0x0ff); //write 16bits add
-                    if (res < 0)
-                    {
-                        printf("Error: Cmd Write Failed\n");
-                        break;
-                    }
-                    flag = 1; // cmd write is done, no needed more
-                }
                 else if (size == I2C_SMBUS_BYTE)
-                {
                     res = i2c_smbus_write_byte(i2cDescriptor,daddress & 0x0ff);
-                    if (res < 0)
-                    {
-                        printf("Error: Cmd Write Failed\n");
-                        break;
-                    }
-                    flag = 1; // cmd write is done, no needed more
+
+                flag = 1; // cmd write is done, no needed more
+                if (res < 0)
+                {
+                    close(i2cDescriptor);
+                    if (res == -ETIMEDOUT)
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiI2CWriteReadEmul,
+                                    EAPI_STATUS_TIMEOUT,
+                                    "i2c writing failed: time-out");
+                    else
+                        EAPI_LIB_RETURN_ERROR(
+                                EApiI2CWriteReadEmul,
+                                EAPI_STATUS_WRITE_ERROR,
+                                "Cmd-i2c writing failed");
+                    break;
                 }
             }
 
             res = i2c_smbus_read_byte(i2cDescriptor);
             if (res < 0){
-                printf("Error: Read Failed\n");
-                break;
+                close(i2cDescriptor);
+                if (res == -ETIMEDOUT)
+                    EAPI_LIB_RETURN_ERROR(
+                                EApiI2CWriteReadEmul,
+                                EAPI_STATUS_TIMEOUT,
+                                "i2c reading failed: time-out");
+                else
+                    EAPI_LIB_RETURN_ERROR(
+                            EApiI2CWriteReadEmul,
+                            EAPI_STATUS_READ_ERROR,
+                            "i2c reading failed");
             }
             else
                 LpRBuffer[iRead] = (uint8_t)res;

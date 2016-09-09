@@ -697,15 +697,20 @@ EApiLibInitialize(void)
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EAPI_CHECK_NOT_INITIALIZED(EApiLibInitialize);
-    Initialized=1;
-
-    printf("salam1\n");
-    EApiInitLib();
-
-    printf("salam2\n");
-    EAPI_LIB_RETURN_SUCCESS(EApiLibInitialize, "");
+    StatusCode = EApiInitLib();
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+    {
+            Initialized=1;
+            EAPI_LIB_RETURN_SUCCESS(EApiLibInitialize, "");
+    }
+    else
+    {
+        EAPI_LIB_RETURN_ERROR(
+                    EApiLibInitialize,
+                    EAPI_STATUS_ERROR,
+                    "Library is not initialized");
+    }
     EAPI_LIB_ASSERT_EXIT
-
             return StatusCode;
 }
 EApiStatus_t 

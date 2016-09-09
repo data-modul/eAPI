@@ -120,11 +120,11 @@ siFormattedMessage_M2(
     ...
     )
 {
-  signed int Ret;
+  signed int Ret=0;
   va_list _ArgList;
 
   va_start(_ArgList, cszFormat);
-
+  if (OutputStream) {
   Ret = fprintf(
       OutputStream,
       cszLogFormat, 
@@ -135,6 +135,7 @@ siFormattedMessage_M2(
     );
   fprintf(OutputStream, "%-25s | ", csz2ndValue);
   Ret += vfprintf(OutputStream, cszFormat, _ArgList);
+    }
 	va_end(_ArgList);
 	return Ret;
 }
@@ -152,11 +153,14 @@ siFormattedMessage_SC(
     ...
     )
 {
-  signed int Ret;
+  signed int Ret=0;
   va_list _ArgList;
   const char *szStatusDesc;
   va_start(_ArgList, cszFormat);
+  if (OutputStream) {
   EApiGetErrorStringA(&szStatusDesc, StatusCode);
+//  if (cType == 'E')
+//      printf("Error:  %s\n",cszFormat);
   Ret = fprintf(
       OutputStream,
       cszLogFormat, 
@@ -171,6 +175,7 @@ siFormattedMessage_SC(
     fprintf(OutputStream, "%-25s | ", szStatusDesc);
   }
   Ret += vfprintf(OutputStream, cszFormat, _ArgList);
+  }
 	va_end(_ArgList);
 	return Ret;
 }

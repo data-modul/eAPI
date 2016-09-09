@@ -80,6 +80,13 @@ EApiBoardGetStringAEmul(
     BufLenSav=*pBufLen;
 
     info = (uint8_t*)calloc(NAME_MAX, sizeof(uint8_t));
+    if (info == NULL)
+    {
+        EAPI_LIB_RETURN_ERROR(
+                    EApiBoardGetStringAEmul,
+                    EAPI_STATUS_ALLOC_ERROR,
+                    "Error in Allocating Memory");
+    }
 
     if (Id == EAPI_ID_BOARD_MANUFACTURER_STR)
         info = eeprom_analyze(eepromBuffer,MANUFACTURE_TYPE,MANUFACTURE_ASCII_IND);
@@ -107,11 +114,14 @@ EApiBoardGetStringAEmul(
             char* res = fgets(line, sizeof(line), f);
 
             if (res == NULL)
+            {
+                snprintf(err,sizeof(err),"Error during read operation: %s\n ",strerror(errno));
                 EAPI_LIB_RETURN_ERROR(
                             EApiBoardGetStringAEmul,
-                            EAPI_STATUS_READ_ERROR  ,
-                            "Error during read operation"
+                            EAPI_STATUS_ERROR  ,
+                            err
                             );
+            }
 
             p=strrchr(line, '\n');//search last space
             *p = '\0';//split at last space
@@ -120,11 +130,13 @@ EApiBoardGetStringAEmul(
             fclose(f);
         }
         else
+        {
+            snprintf(err,sizeof(err),"Error in open file operation: %s\n ",strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiBoardGetStringAEmul,
-                        EAPI_STATUS_READ_ERROR  ,
-                        "Error during read operation"
-                        );
+                        EAPI_STATUS_ERROR  ,
+                        err);
+        }
     }
     else if (Id == EAPI_ID_BOARD_PLATFORM_TYPE_STR)
     {
@@ -155,14 +167,14 @@ EApiBoardGetStringAEmul(
          * *pBufLen=strlen(info);
          *
          */
-
     if(info == NULL)
-            EAPI_LIB_RETURN_ERROR(
-                        EApiBoardGetStringAEmul,
-                        EAPI_STATUS_UNSUPPORTED  ,
-                        "Unrecognised String ID"
-                        );
-
+    {
+        EAPI_LIB_RETURN_ERROR(
+                    EApiBoardGetStringAEmul,
+                    EAPI_STATUS_ERROR  ,
+                    "The board string info is not found."
+                    );
+    }
 
     *pBufLen=(uint32_t)strlen(info)+1;
 
@@ -378,21 +390,21 @@ EApiBoardGetValueEmul(
         int res = fscanf(f, "%d", &value);
         if (res < 0)
         {
+            snprintf(err,sizeof(err),"Error during read operation: %s\n ",strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiBoardGetValueEmul,
-                        EAPI_STATUS_READ_ERROR  ,
-                        "Error during read operation"
-                        );
+                        EAPI_STATUS_ERROR  ,
+                        err);
         }
         fclose(f);
     }
     else
     {
+        snprintf(err,sizeof(err),"Error in open file operation: %s\n ",strerror(errno));
         EAPI_LIB_RETURN_ERROR(
                     EApiBoardGetValueEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Error during read operation"
-                    );
+                    EAPI_STATUS_ERROR  ,
+                    err);
     }
 
     if(Id == EAPI_ID_HWMON_VOLTAGE_VBAT && value!=0xffffff)

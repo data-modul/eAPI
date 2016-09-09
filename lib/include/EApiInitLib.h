@@ -53,6 +53,7 @@ DebugMsg(
 	__IN const char *const fmt,
 	...
 	);
+
 uint32_t
 EApiInitLib();
 uint32_t
