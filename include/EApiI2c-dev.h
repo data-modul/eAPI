@@ -54,10 +54,15 @@ union i2c_smbus_data {
 
 /* SMBus transaction types (size parameter in the above functions)
     Note: these no longer correspond to the (arbitrary) PIIX4 internal codes! */
-//#define I2C_SMBUS_QUICK             0
-#define I2C_SMBUS_BYTE              1
-#define I2C_SMBUS_BYTE_DATA         2
-#define I2C_SMBUS_WORD_DATA         3
+#define I2C_SMBUS_QUICK    0
+#define I2C_SMBUS_BYTE    1
+#define I2C_SMBUS_BYTE_DATA    2
+#define I2C_SMBUS_WORD_DATA   3
+#define I2C_SMBUS_PROC_CALL    4
+#define I2C_SMBUS_BLOCK_DATA    5
+#define I2C_SMBUS_I2C_BLOCK_BROKEN  6
+#define I2C_SMBUS_BLOCK_PROC_CALL   7/* SMBus 2.0 */
+#define I2C_SMBUS_I2C_BLOCK_DATA    8
 
 
 /* /dev/i2c-X ioctl commands.  The ioctl's parameter is always an
@@ -128,6 +133,103 @@ union i2c_smbus_data data;
 data.word = value;
 return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,I2C_SMBUS_WORD_DATA, &data);
 }
+
+/* Returns the number of read bytes */
+/* Until kernel 2.6.22, the length is hardcoded to 32 bytes. If you
+   ask for less than 32 bytes, your code will only work with kernels
+   2.6.23 and later. */
+static inline __s32 i2c_smbus_read_i2c_block_data(int file, __u8 command, __u8 length, __u8 *values)
+{
+    union i2c_smbus_data data;
+    int i;
+
+    if (length > 32)
+        length = 32;
+    data.block[0] = length;
+    if (i2c_smbus_access(file,I2C_SMBUS_READ,command,
+                         length == 32 ? I2C_SMBUS_I2C_BLOCK_BROKEN :
+                         I2C_SMBUS_I2C_BLOCK_DATA,&data))
+        return -1;
+    else {
+        for (i = 1; i <= data.block[0]; i++)
+            values[i-1] = data.block[i];
+        return data.block[0];
+    }
+}
+
+static inline __s32 i2c_smbus_read_byte_data(int file, __u8 command)
+{
+    union i2c_smbus_data data;
+    if (i2c_smbus_access(file,I2C_SMBUS_READ,command, I2C_SMBUS_BYTE_DATA,&data))
+        return -1;
+    else
+        return 0x0FF & data.byte;
+}
+
+static inline __s32 i2c_smbus_write_block_data(int file, __u8 command,__u8 length, const __u8 *values)
+{
+    union i2c_smbus_data data;
+    int i;
+    if (length > 32)
+        length = 32;
+    for (i = 1; i <= length; i++)
+        data.block[i] = values[i-1];
+    data.block[0] = length;
+    return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,I2C_SMBUS_BLOCK_DATA, &data);
+}
+
+
+//while (iRead < ReadBCnt)
+//{
+//if (flag == 0 && no_add != 1 )
+//{
+//    if (size == I2C_SMBUS_BYTE_DATA)
+//        res = i2c_smbus_write_byte_data(i2cDescriptor,(daddress >> 8) & 0x0ff, daddress & 0x0ff); //write 16bits add
+//    else if (size == I2C_SMBUS_BYTE)
+//        res = i2c_smbus_write_byte(i2cDescriptor,daddress & 0x0ff);
+
+//    flag = 1; // cmd write is done, no needed more
+//    if (res < 0)
+//    {
+//        close(i2cDescriptor);
+//        if (res == -ETIMEDOUT)
+//            EAPI_LIB_RETURN_ERROR(
+//                        EApiI2CWriteReadEmul,
+//                        EAPI_STATUS_TIMEOUT,
+//                        "i2c writing failed: time-out");
+//        else
+//            EAPI_LIB_RETURN_ERROR(
+//                    EApiI2CWriteReadEmul,
+//                    EAPI_STATUS_WRITE_ERROR,
+//                    "Cmd-i2c writing failed");
+//        break;
+//    }
+//}
+
+//res = i2c_smbus_read_byte(i2cDescriptor);
+//if (res < 0){
+//    close(i2cDescriptor);
+//    if (res == -ETIMEDOUT)
+//        EAPI_LIB_RETURN_ERROR(
+//                    EApiI2CWriteReadEmul,
+//                    EAPI_STATUS_TIMEOUT,
+//                    "i2c reading failed: time-out");
+//    else
+//        EAPI_LIB_RETURN_ERROR(
+//                EApiI2CWriteReadEmul,
+//                EAPI_STATUS_READ_ERROR,
+//                "i2c reading failed");
+//}
+//else
+//    LpRBuffer[iRead] = (uint8_t)res;
+
+//iRead++;
+//}
+
+
+
+
+
 
 
 #endif // EAPII2CDEV_H

@@ -273,7 +273,8 @@ EApiUninitLib(){
     if (eepromBuffer != NULL)
         free(eepromBuffer);
   if(OutputStream!=NULL&&OutputStream!=stdout&&OutputStream!=stderr){
-      fclose(OutputStream);
+      printf("bye bye\n");
+      //fclose(OutputStream);
   }
  // OutputStream=stdout;
   return EAPI_STATUS_SUCCESS; 

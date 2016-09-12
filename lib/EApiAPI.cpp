@@ -99,7 +99,6 @@ EApiI2CWriteReadRaw(
                                            */
         )
 {
-
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EApiStatus_t ErrorCode2;
     EAPI_CHECK_INITIALIZED(EApiI2CWriteReadRaw);
@@ -128,24 +127,6 @@ EApiI2CWriteReadRaw(
     //      (ReadBCnt>1)&&(pRBuffer==NULL) ,
     //      "pRBuffer is NULL"
     //      );
-    //  EAPI_LIB_ASSERT_PARAMATER_CHECK(
-    //      EApiI2CWriteReadRaw,
-    //      (ReadBCnt>1)&&(RBufLen==0) ,
-    //      "RBufLen is ZERO"
-    //      );
-    //  EAPI_LIB_ASSERT_PARAMATER_CHECK(
-    //      EApiI2CWriteReadRaw,
-    //      ((WriteBCnt==0)&&(ReadBCnt==0)),
-    //      "NO READ NO WRITE"
-    //      );
-
-    //  EAPI_LIB_PREVENT_BUF_OVERFLOW(
-    //      EApiI2CWriteReadRaw,
-    //      ReadBCnt,
-    //      RBufLen+1
-    //      );
-
-
     EAPI_LIB_ASSERT_PARAMATER_CHECK(
                 EApiI2CWriteReadRaw,
                 (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
@@ -181,9 +162,7 @@ EApiI2CWriteReadRaw(
         StatusCode=ErrorCode2;
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
-
 }
-
 
 EApiStatus_t 
 EAPI_CALLTYPE 
@@ -243,13 +222,10 @@ EApiI2CReadTransfer(
 
     if(!EAPI_I2C_IS_NO_CMD(Cmd)){
         if(EAPI_I2C_IS_EXT_CMD(Cmd))
-        {
             LclpBuffer[LclByteCnt++]=(uint8_t)((Cmd>>8)&0xFF);
-        }
 
         LclpBuffer[LclByteCnt++]=(uint8_t)(Cmd&0xFF);
     }
-
 
     StatusCode=EApiI2CWriteReadRaw(
                 Id,
@@ -263,8 +239,6 @@ EApiI2CReadTransfer(
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
-
-
 
 EApiStatus_t 
 EAPI_CALLTYPE
@@ -366,6 +340,7 @@ EApiI2CWriteTransfer(
     //      0,
     //      0
     //      );
+
 
     StatusCode=EApiI2CWriteReadRaw(
                 Id,

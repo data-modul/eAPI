@@ -41,6 +41,11 @@
 #include <sys/ioctl.h>
  #include <errno.h>
 
+
+#define CMD_TYPE_0BIT 0
+#define CMD_TYPE_8BIT 1
+#define CMD_TYPE_16BIT 2
+
 EApiStatus_t 
 EAPI_CALLTYPE 
 EApiI2CGetBusCapEmul(
@@ -57,7 +62,7 @@ EApiI2CGetBusCapEmul(
                     "Unrecognised I2C ID"
                     );
 
-    *pMaxBlkLen=512;
+    *pMaxBlkLen=128;
     EAPI_LIB_RETURN_SUCCESS(
                 EApiI2CGetBusCapEmul,
                 ""
@@ -94,7 +99,6 @@ EApiI2CWriteReadEmul(
         __IN      uint32_t ReadBCnt
         )
 {
-
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     uint32_t LclAddr;
     ////
@@ -119,7 +123,7 @@ EApiI2CWriteReadEmul(
     {
         EAPI_LIB_RETURN_ERROR(
                     EApiI2CWriteReadEmul,
-                    EAPI_STATUS_NOT_FOUND,
+                    EAPI_STATUS_UNSUPPORTED,
                     "Chip address out of range"
                     );
     }
@@ -146,28 +150,26 @@ EApiI2CWriteReadEmul(
                 );
 #endif
 
-
     if (ReadBCnt > 0 && pRBuffer!=NULL) // it means func is called for ReadTransfer
     {
-
         if(WriteBCnt > 1) //there is a Cmd
         {
             //cmd is 8 bit
-            size = I2C_SMBUS_BYTE;
+            size = CMD_TYPE_8BIT;
             daddress=*((uint8_t *)pWBuffer);
             WriteBCnt--;
 
             //cmd is 16bits
             if (WriteBCnt > 1)
             {
-                size = I2C_SMBUS_BYTE_DATA;
+                size = CMD_TYPE_16BIT;
                 daddress|=*(((uint8_t *)pWBuffer+1));
                 WriteBCnt--;
             }
         }
-        else
+        else //no-cmd
         {
-            size = I2C_SMBUS_BYTE;
+            size = CMD_TYPE_0BIT;
             no_add = 1;
         }
     }
@@ -178,7 +180,7 @@ EApiI2CWriteReadEmul(
             daddress = *((uint8_t *)pWBuffer);
             pWBuffer=((uint8_t *)pWBuffer)+1;
             WriteBCnt--;
-            size = I2C_SMBUS_BYTE;
+            size = CMD_TYPE_8BIT;
         }
         else if (ReadBCnt == 2)// it has 2bytes-Cmd
         {
@@ -188,17 +190,16 @@ EApiI2CWriteReadEmul(
             pWBuffer=((uint8_t *)pWBuffer)+2;
             WriteBCnt=WriteBCnt-2;
             ReadBCnt=ReadBCnt-2;
-            size = I2C_SMBUS_BYTE_DATA;
+            size = CMD_TYPE_16BIT;
         }
         else //no cmd
         {
             EAPI_LIB_RETURN_ERROR(
                         EApiI2CWriteReadEmul,
-                        EAPI_STATUS_NOT_FOUND,
-                        "Proper Command is required."
+                        EAPI_STATUS_ERROR,
+                        "Proper Cmd is required."
                         );
         }
-
     }
 
     // open device
@@ -249,7 +250,6 @@ EApiI2CWriteReadEmul(
                     EAPI_STATUS_NOT_FOUND,
                     err);
     }
-
     //  write to the device
     if (WriteBCnt > 1)
         WriteBCnt--;
@@ -261,13 +261,9 @@ EApiI2CWriteReadEmul(
         int res = 0;
         uint8_t value;
 
-        while (iWrite < WriteBCnt)
+        if(size == CMD_TYPE_8BIT) // one byte Cmd
         {
-            if (size == I2C_SMBUS_BYTE_DATA){
-                value = *((uint8_t *)pWBuffer);
-                res = i2c_smbus_write_word_data(i2cDescriptor,(daddress >> 8) & 0x00ff, value << 8 | (daddress & 0x00ff));
-            }
-            else  if (size == I2C_SMBUS_BYTE) // one cmd
+            if (WriteBCnt == 1) // write just one byte
             {
                 if (pWBuffer == NULL) //no value
                 {
@@ -279,24 +275,102 @@ EApiI2CWriteReadEmul(
                     res = i2c_smbus_write_byte_data(i2cDescriptor,daddress & 0x00ff, value);
                 }
             }
+            else // write block
+            {
+                res = i2c_smbus_write_block_data(i2cDescriptor, daddress & 0x0ff, WriteBCnt, pWBuffer);
+            }
             if (res < 0){
                 close(i2cDescriptor);
+                snprintf(err,sizeof(err),"i2c writing failed: %s\n",strerror(errno));
 
                 if (res == -ETIMEDOUT)
                     EAPI_LIB_RETURN_ERROR(
                                 EApiI2CWriteReadEmul,
                                 EAPI_STATUS_TIMEOUT,
-                                "i2c writing failed: time-out");
+                                err);
                 else
                     EAPI_LIB_RETURN_ERROR(
-                            EApiI2CWriteReadEmul,
-                            EAPI_STATUS_WRITE_ERROR,
-                            "i2c writing failed");
+                                EApiI2CWriteReadEmul,
+                                EAPI_STATUS_WRITE_ERROR,
+                                err);
             }
-            pWBuffer=((uint8_t *)pWBuffer)+1;
-            daddress++;
-            iWrite++;
+            else
+                iWrite = WriteBCnt;
         }
+        else if (size == CMD_TYPE_16BIT) //2 bytes Cmd
+        {
+            while (iWrite < WriteBCnt)
+            {
+                    value = *((uint8_t *)pWBuffer);
+                    res = i2c_smbus_write_word_data(i2cDescriptor,(daddress >> 8) & 0x00ff, value << 8 | (daddress & 0x00ff));
+                if (res < 0){
+                    close(i2cDescriptor);
+                    snprintf(err,sizeof(err),"i2c writing failed: %s\n",strerror(errno));
+
+                    if (res == -ETIMEDOUT)
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiI2CWriteReadEmul,
+                                    EAPI_STATUS_TIMEOUT,
+                                    err);
+                    else
+                        EAPI_LIB_RETURN_ERROR(
+                                EApiI2CWriteReadEmul,
+                                EAPI_STATUS_WRITE_ERROR,
+                                err);
+                }
+                pWBuffer=((uint8_t *)pWBuffer)+1;
+                daddress++;
+                iWrite++;
+            }
+        }
+        else
+        {
+            close(i2cDescriptor);
+            EAPI_LIB_RETURN_ERROR(
+                        EApiI2CWriteReadEmul,
+                        EAPI_STATUS_WRITE_ERROR,
+                        "i2c writing failed");
+        }
+
+//        while (iWrite < WriteBCnt)
+//        {
+//            if (size == I2C_SMBUS_BYTE_DATA){
+//                printf("test1\n");
+//                value = *((uint8_t *)pWBuffer);
+//                res = i2c_smbus_write_word_data(i2cDescriptor,(daddress >> 8) & 0x00ff, value << 8 | (daddress & 0x00ff));
+//            }
+//            else  if (size == CMD_TYPE_8BIT) // one cmd
+//            {
+//                if (pWBuffer == NULL) //no value
+//                {
+//                    printf("test2\n");
+//                    res = i2c_smbus_write_byte(i2cDescriptor,daddress & 0x0ff);
+//                }
+//                else // one cmd and values
+//                {
+//                    printf("test3\n");
+//                    value = *((uint8_t *)pWBuffer);
+//                    res = i2c_smbus_write_byte_data(i2cDescriptor,daddress & 0x00ff, value);
+//                }
+//            }
+//            if (res < 0){
+//                close(i2cDescriptor);
+
+//                if (res == -ETIMEDOUT)
+//                    EAPI_LIB_RETURN_ERROR(
+//                                EApiI2CWriteReadEmul,
+//                                EAPI_STATUS_TIMEOUT,
+//                                "i2c writing failed: time-out");
+//                else
+//                    EAPI_LIB_RETURN_ERROR(
+//                            EApiI2CWriteReadEmul,
+//                            EAPI_STATUS_WRITE_ERROR,
+//                            "i2c writing failed");
+//            }
+//            pWBuffer=((uint8_t *)pWBuffer)+1;
+//            daddress++;
+//            iWrite++;
+//        }
 
         close(i2cDescriptor);
 
@@ -311,12 +385,10 @@ EApiI2CWriteReadEmul(
 
 
     //   Read from the device
-
     if (ReadBCnt > 1)
         ReadBCnt--;
     else
         ReadBCnt =0;
-
     if(ReadBCnt)
     {
         uint8_t* LpRBuffer=pRBuffer;
@@ -324,55 +396,137 @@ EApiI2CWriteReadEmul(
         int res = 0;
         int flag = 0;
 
-        while (iRead < ReadBCnt)
+        if (size == CMD_TYPE_0BIT) // no-cmd
         {
-            if (flag == 0 && no_add != 1 )
+            while (iRead < ReadBCnt)
             {
-                if (size == I2C_SMBUS_BYTE_DATA)
-                    res = i2c_smbus_write_byte_data(i2cDescriptor,(daddress >> 8) & 0x0ff, daddress & 0x0ff); //write 16bits add
-                else if (size == I2C_SMBUS_BYTE)
-                    res = i2c_smbus_write_byte(i2cDescriptor,daddress & 0x0ff);
-
-                flag = 1; // cmd write is done, no needed more
-                if (res < 0)
-                {
+                res = i2c_smbus_read_byte(i2cDescriptor);
+                if (res < 0){
                     close(i2cDescriptor);
+                    snprintf(err,sizeof(err),"i2c reading failed: %s\n",strerror(errno));
                     if (res == -ETIMEDOUT)
                         EAPI_LIB_RETURN_ERROR(
                                     EApiI2CWriteReadEmul,
                                     EAPI_STATUS_TIMEOUT,
-                                    "i2c writing failed: time-out");
+                                    err);
                     else
                         EAPI_LIB_RETURN_ERROR(
                                 EApiI2CWriteReadEmul,
-                                EAPI_STATUS_WRITE_ERROR,
-                                "Cmd-i2c writing failed");
-                    break;
+                                EAPI_STATUS_READ_ERROR,
+                                err);
+                }
+                else
+                    LpRBuffer[iRead] = (uint8_t)res;
+
+                iRead++;
+            }
+        }
+        else if (size == CMD_TYPE_8BIT) //cmd-8
+        {
+            if (ReadBCnt == 1) // read just one byte
+            {
+                res = i2c_smbus_read_byte_data(i2cDescriptor, daddress & 0x0ff);
+                if (res < 0){
+                    close(i2cDescriptor);
+                    snprintf(err,sizeof(err),"i2c reading failed: %s\n",strerror(errno));
+
+                    if (res == -ETIMEDOUT)
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiI2CWriteReadEmul,
+                                    EAPI_STATUS_TIMEOUT,
+                                    err);
+                    else
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiI2CWriteReadEmul,
+                                    EAPI_STATUS_READ_ERROR,
+                                    err);
+                }
+                else
+                {
+                    LpRBuffer[iRead] = (uint8_t)res;
+                iRead++;
                 }
             }
+            else // read block
+            {
+                res = i2c_smbus_read_i2c_block_data(i2cDescriptor, daddress & 0x0ff, ReadBCnt, LpRBuffer);
+                if (res < 0)
+                {
+                    close(i2cDescriptor);
+                    snprintf(err,sizeof(err),"i2c reading failed: %s\n",strerror(errno));
 
-            res = i2c_smbus_read_byte(i2cDescriptor);
-            if (res < 0){
+                    if (res == -ETIMEDOUT)
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiI2CWriteReadEmul,
+                                    EAPI_STATUS_TIMEOUT,
+                                    err);
+                    else
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiI2CWriteReadEmul,
+                                    EAPI_STATUS_READ_ERROR,
+                                    err);
+                }
+                else if (res != ReadBCnt)
+                {
+                    close(i2cDescriptor);
+                    EAPI_LIB_RETURN_ERROR(
+                                EApiI2CWriteReadEmul,
+                                EAPI_STATUS_READ_ERROR,
+                                "i2c reading failed: cannot read all requested bytes");
+                }
+                iRead = res;
+            }
+        }
+        else if (size == CMD_TYPE_16BIT) //cmd-16
+        {
+            res = i2c_smbus_write_byte_data(i2cDescriptor,(daddress >> 8) & 0x0ff, daddress & 0x0ff); //write 16bits add
+            if (res < 0)
+            {
                 close(i2cDescriptor);
+                snprintf(err,sizeof(err),"i2c writing 16-Addr failed: %s\n",strerror(errno));
                 if (res == -ETIMEDOUT)
                     EAPI_LIB_RETURN_ERROR(
                                 EApiI2CWriteReadEmul,
                                 EAPI_STATUS_TIMEOUT,
-                                "i2c reading failed: time-out");
+                                err);
                 else
                     EAPI_LIB_RETURN_ERROR(
-                            EApiI2CWriteReadEmul,
-                            EAPI_STATUS_READ_ERROR,
-                            "i2c reading failed");
+                                EApiI2CWriteReadEmul,
+                                EAPI_STATUS_WRITE_ERROR,
+                                err);
             }
-            else
-                LpRBuffer[iRead] = (uint8_t)res;
+            while (iRead < ReadBCnt)
+            {
+                res = i2c_smbus_read_byte(i2cDescriptor);
+                if (res < 0){
+                    close(i2cDescriptor);
+                    snprintf(err,sizeof(err),"i2c reading failed: %s\n",strerror(errno));
+                    if (res == -ETIMEDOUT)
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiI2CWriteReadEmul,
+                                    EAPI_STATUS_TIMEOUT,
+                                    err);
+                    else
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiI2CWriteReadEmul,
+                                    EAPI_STATUS_READ_ERROR,
+                                    err);
+                }
+                else
+                    LpRBuffer[iRead] = (uint8_t)res;
 
-            iRead++;
+                iRead++;
+            }
+        }
+        else //error
+        {
+            EAPI_LIB_RETURN_ERROR(
+                        EApiI2CWriteReadEmul,
+                        EAPI_STATUS_ERROR,
+                        "i2c reading failed: Wrong read request");
         }
 
         close(i2cDescriptor);
-
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiI2CWriteReadEmul,
                     (iRead != ReadBCnt) ,
