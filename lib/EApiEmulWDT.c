@@ -46,15 +46,15 @@
  *
  *
  */
-//#define WATCHDOG_ENABLED  ((unsigned)-1)
-//#define WATCHDOG_DISABLED ((unsigned)0)
-//static unsigned WatchdogState=WATCHDOG_DISABLED;
+#define WATCHDOG_ENABLED  ((unsigned)-1)
+#define WATCHDOG_DISABLED ((unsigned)0)
+static unsigned WatchdogState=WATCHDOG_DISABLED;
 
 
-//#define MIN_IN_millisec(x) ((x)*60*1000)
-//#define MaxDelay        MIN_IN_millisec(10)
-//#define MaxEventTimeout MIN_IN_millisec(10)
-//#define MaxResetTimeout MIN_IN_millisec(10)
+#define MIN_IN_millisec(x) ((x)*60*1000)
+#define MaxDelay        MIN_IN_millisec(10)
+#define MaxEventTimeout MIN_IN_millisec(10)
+#define MaxResetTimeout MIN_IN_millisec(10)
 EApiStatus_t 
 EAPI_CALLTYPE
 EApiWDogGetCapEmul(
@@ -73,10 +73,10 @@ EApiWDogGetCapEmul(
     )
 {
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-//  *pMaxDelay        =MaxDelay;
-//  *pMaxEventTimeout =MaxEventTimeout;
-//  *pMaxResetTimeout =MaxResetTimeout;
-//  EAPI_LIB_RETURN_SUCCESS(EApiWDogGetCapEmul, "");
+  *pMaxDelay        =MaxDelay;
+  *pMaxEventTimeout =MaxEventTimeout;
+  *pMaxResetTimeout =MaxResetTimeout;
+  EAPI_LIB_RETURN_SUCCESS(EApiWDogGetCapEmul, "");
 
 EAPI_LIB_ASSERT_EXIT
 
@@ -94,29 +94,29 @@ EApiWDogStartEmul(
     )
 {
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-//  EAPI_LIB_RETURN_ERROR_IF(
-//      EApiWDogStartEmul,
-//      (WatchdogState==WATCHDOG_ENABLED),
-//      EAPI_STATUS_RUNNING,
-//      "Watchdog alread runing, need to stop before starting"
-//      );
-//  EAPI_LIB_ASSERT_PARAMATER_CHECK(
-//    EApiWDogStartEmul,
-//    (Delay>MaxDelay),
-//   "(Delay>pMaxDelay)"
-//  );
-//  EAPI_LIB_ASSERT_PARAMATER_CHECK(
-//    EApiWDogStartEmul,
-//    (EventTimeout>MaxEventTimeout),
-//   "(EventTimeout>pMaxEventTimeout)"
-//  );
-//  EAPI_LIB_ASSERT_PARAMATER_CHECK(
-//    EApiWDogStartEmul,
-//    (ResetTimeout>MaxResetTimeout),
-//   "(ResetTimeout>pMaxResetTimeout)"
-//  );
-//  WatchdogState=WATCHDOG_ENABLED;
-//  EAPI_LIB_RETURN_SUCCESS(EApiWDogStartEmul, "");
+  EAPI_LIB_RETURN_ERROR_IF(
+      EApiWDogStartEmul,
+      (WatchdogState==WATCHDOG_ENABLED),
+      EAPI_STATUS_RUNNING,
+      "Watchdog alread runing, need to stop before starting"
+      );
+  EAPI_LIB_ASSERT_PARAMATER_CHECK(
+    EApiWDogStartEmul,
+    (Delay>MaxDelay),
+   "(Delay>pMaxDelay)"
+  );
+  EAPI_LIB_ASSERT_PARAMATER_CHECK(
+    EApiWDogStartEmul,
+    (EventTimeout>MaxEventTimeout),
+   "(EventTimeout>pMaxEventTimeout)"
+  );
+  EAPI_LIB_ASSERT_PARAMATER_CHECK(
+    EApiWDogStartEmul,
+    (ResetTimeout>MaxResetTimeout),
+   "(ResetTimeout>pMaxResetTimeout)"
+  );
+  WatchdogState=WATCHDOG_ENABLED;
+  EAPI_LIB_RETURN_SUCCESS(EApiWDogStartEmul, "");
 EAPI_LIB_ASSERT_EXIT
 
   return StatusCode;
@@ -125,17 +125,17 @@ EApiStatus_t
 EApiWDogTriggerEmul(void)
 {
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-//  EAPI_LIB_RETURN_ERROR_IF(
-//      EApiWDogTriggerEmul,
-//      (WatchdogState==WATCHDOG_DISABLED),
-//      EAPI_STATUS_ERROR,
-//      "Watchdog Disabled therefore not possible to trigger"
-//      );
+  EAPI_LIB_RETURN_ERROR_IF(
+      EApiWDogTriggerEmul,
+      (WatchdogState==WATCHDOG_DISABLED),
+      EAPI_STATUS_ERROR,
+      "Watchdog Disabled therefore not possible to trigger"
+      );
 
-//  EAPI_LIB_RETURN_SUCCESS(
-//      EApiWDogTriggerEmul,
-//      ""
-//      );
+  EAPI_LIB_RETURN_SUCCESS(
+      EApiWDogTriggerEmul,
+      ""
+      );
 EAPI_LIB_ASSERT_EXIT
 
   return StatusCode;
@@ -144,11 +144,11 @@ EApiStatus_t
 EApiWDogStopEmul(void)
 {
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-//  WatchdogState=WATCHDOG_DISABLED;
-//  EAPI_LIB_RETURN_SUCCESS(
-//      EApiWDogStopEmul,
-//      ""
-//      );
+  WatchdogState=WATCHDOG_DISABLED;
+  EAPI_LIB_RETURN_SUCCESS(
+      EApiWDogStopEmul,
+      ""
+      );
 EAPI_LIB_ASSERT_EXIT
 
   return StatusCode;

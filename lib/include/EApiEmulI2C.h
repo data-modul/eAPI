@@ -55,9 +55,9 @@ EAPI_CALLTYPE
 EApiI2CWriteReadEmul(
 	__IN      uint32_t  Id,
 	__IN      uint8_t   Addr,
-	__INOPT   void     *pWpBuffer,
+    __INOPT   uint8_t     *pWpBuffer,
 	__IN      uint32_t  WriteBCnt,
-	__OUTOPT  void     *pRpBuffer,
+    __OUTOPT  uint8_t     *pRpBuffer,
 	__IN      uint32_t  ReadBCnt
 	);
 

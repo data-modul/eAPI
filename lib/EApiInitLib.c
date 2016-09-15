@@ -51,29 +51,37 @@ void __cdecl DebugMsg(__IN const char *const fmt, ...)
 {
   va_list arg;
   va_start(arg, fmt);
-  if(OutputStream!=NULL)
+  if(OutputStream!=NULL) {
     vfprintf(OutputStream, fmt, arg);
-  else
-    vfprintf(stdout, fmt, arg);
+  //else
+    //vfprintf(stdout, fmt, arg);
 
   fflush(OutputStream);
+  }
   va_end(arg);
 }
 
 
-void find_hwmon(char **result)
+EApiStatus_t find_hwmon(char **result)
 {
     char s[NAME_MAX];
     struct dirent *de;
     DIR *dir;
     FILE *f;
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+
     char sysfs[NAME_MAX], n[NAME_MAX];
     snprintf(sysfs,sizeof(HWMON_PATH),HWMON_PATH);
 
     if(!(dir = opendir(sysfs)))
     {
-        printf("Error: %s =>",strerror(errno));
-        return NULL;
+        *result = NULL;
+
+        snprintf(err,sizeof(err),"%s",strerror(errno));
+        EAPI_LIB_RETURN_ERROR(
+                    find_hwmon,
+                    EAPI_STATUS_UNSUPPORTED,
+                    err);
     }
     /* go through the hwmons */
     while ((de = readdir(dir)) != NULL) {
@@ -93,8 +101,14 @@ void find_hwmon(char **result)
         }
         if(f == NULL)
         {
-            printf("Error: %s => ",strerror(errno));
-            return NULL;
+            //printf("Error: %s => ",strerror(errno));
+            *result = NULL;            
+            closedir(dir);
+            snprintf(err,sizeof(err),"%s",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        find_hwmon,
+                        EAPI_STATUS_UNSUPPORTED,
+                        err);
         }
             char *px;
 
@@ -107,27 +121,49 @@ void find_hwmon(char **result)
             if ((px = strchr(s, '\n')) != NULL)
                 *px = 0;
 
-            if(!strncmp(s, HWMON_NAME,sizeof(HWMON_NAME)))
+            if( (s != NULL) && (!strncmp(s, HWMON_NAME,sizeof(HWMON_NAME))))
             {
-                *result = HWMON_NAME;
+                *result = de->d_name;
+                StatusCode = EAPI_STATUS_SUCCESS;
                 break;
             }
             else
+            {
                 *result = NULL;
+                StatusCode = EAPI_STATUS_UNSUPPORTED;
+            }
 
     }
+
     closedir(dir);
-    return;
+    if (StatusCode == EAPI_STATUS_UNSUPPORTED )
+        EAPI_LIB_RETURN_ERROR(
+                    find_hwmon,
+                    EAPI_STATUS_UNSUPPORTED,
+                    "Info: No HWMON is found.");
+    EAPI_LIB_ASSERT_EXIT
+  return StatusCode;
 }
 
 EApiStatus_t 
 EApiInitLib(){
-  if(OutputStream==NULL){
-#if EAPI_DBG_USE_OUTPUT_FILE
-    OutputStream=fopen(TEXT("EApi.log"), TEXT("w"));
-#else
-    OutputStream=stdout;
-#endif
+//  if(OutputStream==NULL){
+//#if EAPI_DBG_USE_OUTPUT_FILE
+//    OutputStream=fopen(TEXT("EApi.log"), TEXT("w"));
+//#else
+//    OutputStream=stdout;
+
+//#endif
+//i  }
+
+  char* logpath = getenv("LOGPATH");
+  if(logpath == NULL)
+      OutputStream=NULL;
+  else {
+        strcat(logpath, "/EApi.log");
+        OutputStream=fopen(logpath, TEXT("w"));
+        if (OutputStream == NULL)
+            printf("Cannot create log file in %s: %s\n",logpath,strerror(errno));
   }
 
   int eeprom_bus;
@@ -135,18 +171,27 @@ EApiInitLib(){
   char devname[20];
   int i2cDescriptor = 0;
   int res = 0;
-  int flag = 0;
   int iRead = 0;
-  char * pBoradType;
+  uint8_t * pBoradType;
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+
+  DebugMsg("#\n"
+            "# Embedded API EApi\n"
+            "# Version %u.%u\n"
+            "# Lib Version %u.%u.%u\n"
+            "#\n",
+            EAPI_VER_GET_VER(EAPI_VERSION), EAPI_VER_GET_REV(EAPI_VERSION),
+            LIB_VERSION, LIB_REVISION, LIB_BUILD
+          );
 
   /* ******************** EEPROM ************************** */
   /* Find Eeprom i2c-bus and read & fill the buffer */
   eeprom_bus = find_eeprom();
+
   if (eeprom_bus >= 0)
   {
       // read eeprom
-      eepromBuffer = (uint8_t*)calloc(EEPROM_SIZE, sizeof(uint8_t));
+      eepromBuffer = (uint8_t *)calloc(EEPROM_SIZE, sizeof(uint8_t));
       if (eepromBuffer == NULL)
       {
           snprintf(err,sizeof(err),"Error in Eeprom Allocating Memory\n");
@@ -156,7 +201,6 @@ EApiInitLib(){
                       EAPI_STATUS_ALLOC_ERROR,
                       err);
       }
-
       Cmd = EAPI_I2C_ENC_EXT_CMD(0x00);
 
       // open device
@@ -189,22 +233,18 @@ EApiInitLib(){
       }
       if(EEPROM_SIZE)
       {
+          res = i2c_smbus_write_byte_data(i2cDescriptor,(Cmd >> 8) & 0x0ff, Cmd & 0x0ff); //write 16bits add
+          if (res < 0)
+          {
+              snprintf(err,sizeof(err),"Cannot write into Eeprom: %s\n",strerror(errno));
+              printf("%s",err);
+              EAPI_LIB_RETURN_ERROR(
+                          EApiInitLib,
+                          EAPI_STATUS_WRITE_ERROR,
+                          err);
+          }
           while (iRead < EEPROM_SIZE)
           {
-              if (flag == 0)
-              {
-                  res = i2c_smbus_write_byte_data(i2cDescriptor,(Cmd >> 8) & 0x0ff, Cmd & 0x0ff); //write 16bits add
-                  if (res < 0)
-                  {
-                      snprintf(err,sizeof(err),"Cannot write into Eeprom: %s\n",strerror(errno));
-                      printf("%s",err);
-                      EAPI_LIB_RETURN_ERROR(
-                                  EApiInitLib,
-                                  EAPI_STATUS_WRITE_ERROR,
-                                  err);
-                  }
-                  flag = 1; // cmd write is done, no needed more
-              }
               res = i2c_smbus_read_byte(i2cDescriptor);
               if (res < 0)
               {
@@ -216,46 +256,59 @@ EApiInitLib(){
                               err);
               }
               else
-                  eepromBuffer[iRead] = (uint8_t)res;
+              {
+                  eepromBuffer[iRead] = (uint8_t) res;
+              }
               iRead++;
           }
           close(i2cDescriptor);
       }
       /* ********************************************** */
       /* detect_board_type */
-      pBoradType=(char *)malloc((NAME_MAX) * sizeof(char));
-      pBoradType = eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
-      if(!strncmp(pBoradType,"BBW6",4))
-          borad_type = BBW6;
-      else if(!strncmp(pBoradType,"CBS6",4))
-          borad_type = CBS6;
-      else
+      pBoradType=(uint8_t *)malloc((NAME_MAX) * sizeof(uint8_t));
+      if (pBoradType != NULL)
       {
-          printf("Board type is unknown\n");
-          borad_type = UNKNOWN;
+          pBoradType = eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
+          if (pBoradType != NULL)
+          {
+              if(!strncmp((const char*)pBoradType,"BBW6",4))
+                  borad_type = BBW6;
+              else if(!strncmp((const char*)pBoradType,"CBS6",4))
+                  borad_type = CBS6;
+              else
+                  borad_type = UNKNOWN;
+          }
+          else
+              borad_type = UNKNOWN;
+
+          free(pBoradType);
       }
-      free(pBoradType);
+      else
+          borad_type = UNKNOWN;
   }
   else
+  {
       printf("Error: No Eeprom Bus is found.\n");
+      EAPI_LIB_RETURN_ERROR(
+                  EApiInitLib,
+                  EAPI_STATUS_ERROR,
+                  "Error: No Eeprom Bus is found.");
+  }
 
 
   /* ********************************************** */
 /* find hwmon */
     hwname = NULL;
     find_hwmon(&hwname);
-    if (!hwname)
-        printf("Info: No HWMON is found.\n");
 
-
-    DebugMsg("#\n"
-              "# Embedded API EApi\n"
-              "# Version %u.%u\n"
-              "# Lib Version %u.%u.%u\n"
-              "#\n",
-              EAPI_VER_GET_VER(EAPI_VERSION), EAPI_VER_GET_REV(EAPI_VERSION), 
-              LIB_VERSION, LIB_REVISION, LIB_BUILD
-            );
+//    DebugMsg("#\n"
+//              "# Embedded API EApi\n"
+//              "# Version %u.%u\n"
+//              "# Lib Version %u.%u.%u\n"
+//              "#\n",
+//              EAPI_VER_GET_VER(EAPI_VERSION), EAPI_VER_GET_REV(EAPI_VERSION),
+//              LIB_VERSION, LIB_REVISION, LIB_BUILD
+//            );
 
     EAPI_LIB_ASSERT_EXIT
   return StatusCode;
@@ -272,11 +325,12 @@ EApiUninitLib(){
 
     if (eepromBuffer != NULL)
         free(eepromBuffer);
-  if(OutputStream!=NULL&&OutputStream!=stdout&&OutputStream!=stderr){
-      printf("bye bye\n");
-      //fclose(OutputStream);
+
+
+  if(OutputStream!=NULL){
+    fclose(OutputStream);
+    OutputStream=NULL;
   }
- // OutputStream=stdout;
   return EAPI_STATUS_SUCCESS; 
 }
 

@@ -159,8 +159,7 @@ siFormattedMessage_SC(
   va_start(_ArgList, cszFormat);
   if (OutputStream) {
   EApiGetErrorStringA(&szStatusDesc, StatusCode);
-//  if (cType == 'E')
-//      printf("Error:  %s\n",cszFormat);
+
   Ret = fprintf(
       OutputStream,
       cszLogFormat, 

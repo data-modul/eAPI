@@ -88,11 +88,11 @@ EApiI2CWriteReadRaw(
         __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
                                            * Device Address
                                            */
-        __INOPT  void     *pWBuffer , /* Write Data pBuffer */
+        __INOPT  uint8_t     *pWBuffer , /* Write Data pBuffer */
         __IN     uint32_t  WriteBCnt, /* Number of Bytes to
                                            * write
                                            */
-        __OUTOPT void     *pRBuffer , /* Read Data pBuffer */
+        __OUTOPT uint8_t     *pRBuffer , /* Read Data pBuffer */
         __IN     uint32_t  RBufLen  , /* Data pBuffer Length */
         __IN     uint32_t  ReadBCnt   /* Number of Bytes to
                                            * Read
@@ -172,7 +172,7 @@ EApiI2CReadTransfer(
                                        * Device Address
                                        */
         __IN  uint32_t  Cmd     , /* I2C Command/Offset */
-        __OUT     void *pBuffer , /* Transfer Data pBuffer */
+        __OUT uint8_t *pBuffer , /* Transfer Data pBuffer */
         __IN  uint32_t  BufLen  , /* Data pBuffer Length */
         __IN  uint32_t  ByteCnt   /* Byte Count to read */
         )
@@ -230,7 +230,7 @@ EApiI2CReadTransfer(
     StatusCode=EApiI2CWriteReadRaw(
                 Id,
                 (uint8_t)Addr,
-                &LclpBuffer,
+                LclpBuffer,
                 LclByteCnt+1,
                 pBuffer,
                 BufLen,
@@ -248,7 +248,7 @@ EApiI2CWriteTransfer(
                                        * Device Address
                                        */
         __IN  uint32_t  Cmd     , /* I2C Command/Offset */
-        __IN      void *pBuffer , /* Transfer Data pBuffer */
+        __IN  uint8_t *pBuffer , /* Transfer Data pBuffer */
         __IN  uint32_t  ByteCnt   /* Byte Count to write */
         )
 {
@@ -294,12 +294,6 @@ EApiI2CWriteTransfer(
         }
         pLclBuffer[LclByteCnt++]=(uint8_t)((Cmd)&UINT8_MAX);
     }
-    else
-        EAPI_LIB_RETURN_ERROR(
-                    EApiI2CWriteTransfer,
-                    EAPI_STATUS_WRITE_ERROR,
-                    "Error: Command is required."
-                    );
 
 #if (STRICT_VALIDATION>1)
     EApiI2CGetBusCap(Id, &MaxBlkLen);
@@ -580,7 +574,7 @@ EApiGPIOSetLevel(
     EAPI_CHECK_INITIALIZED(EApiGPIOSetLevel);
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiGPIOSetLevel, Bitmask);
 
-    StatusCode=EApiGPIOSetLevelEmul(Id, Bitmask, Level);
+   StatusCode=EApiGPIOSetLevelEmul(Id, Bitmask, Level);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -600,7 +594,7 @@ EApiGPIOGetDirection(
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiGPIOGetDirection, Bitmask);
     EAPI_LIB_ASSERT_PARAMATER_NULL(EApiGPIOGetDirection, pDirection);
 
-    StatusCode=EApiGPIOGetDirectionEmul(Id, Bitmask, pDirection);
+  StatusCode=EApiGPIOGetDirectionEmul(Id, Bitmask, pDirection);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -619,7 +613,7 @@ EApiGPIOSetDirection(
     EAPI_CHECK_INITIALIZED(EApiGPIOSetDirection);
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiGPIOSetDirection, Bitmask);
 
-    StatusCode=EApiGPIOSetDirectionEmul(Id, Bitmask, Direction);
+   StatusCode=EApiGPIOSetDirectionEmul(Id, Bitmask, Direction);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -651,7 +645,7 @@ EApiGPIOGetDirectionCaps(
     if(pOutputs==NULL)
         pOutputs=&DpBuffer;
 
-    StatusCode=EApiGPIOGetDirectionCapsEmul(Id, pInputs, pOutputs);
+  StatusCode=EApiGPIOGetDirectionCapsEmul(Id, pInputs, pOutputs);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -696,7 +690,7 @@ EApiLibUnInitialize(void)
     EAPI_CHECK_INITIALIZED(EApiLibUnInitialize);
     EApiUninitLib();
     Initialized=0;
-    EAPI_LIB_RETURN_SUCCESS(EApiLibUnInitialize, "");
+   EAPI_LIB_RETURN_SUCCESS(EApiLibUnInitialize, "");
     EAPI_LIB_ASSERT_EXIT
 
             return StatusCode;
@@ -761,7 +755,7 @@ EApiWDogStart(
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EAPI_CHECK_INITIALIZED(EApiWDogStart);
-    StatusCode=EApiWDogStartEmul(Delay, EventTimeout, ResetTimeout);
+  StatusCode=EApiWDogStartEmul(Delay, EventTimeout, ResetTimeout);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -771,7 +765,7 @@ EApiWDogTrigger(void)
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EAPI_CHECK_INITIALIZED(EApiWDogTrigger);
-    StatusCode=EApiWDogTriggerEmul();
+   StatusCode=EApiWDogTriggerEmul();
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -817,7 +811,7 @@ EApiStorageCap(
     if(pBlockLength==NULL)
         pBlockLength=&DummyValue;
 
-    StatusCode=EApiStorageCapEmul(Id, pStorageSize, pBlockLength);
+   StatusCode=EApiStorageCapEmul(Id, pStorageSize, pBlockLength);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -886,7 +880,7 @@ EApiStorageAreaWrite(
     EAPI_LIB_ASSERT_PARAMATER_NULL(EApiStorageAreaWrite, pBuffer);
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiStorageAreaWrite, ByteCnt);
 
-    StatusCode=EApiStorageAreaWriteEmul(Id, Offset, pBuffer, ByteCnt);
+  StatusCode=EApiStorageAreaWriteEmul(Id, Offset, pBuffer, ByteCnt);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }

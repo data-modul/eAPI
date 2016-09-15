@@ -72,14 +72,14 @@ EApiBoardGetStringAEmul(
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     uint32_t BufLenSav;
     FILE *f = NULL;
-    uint8_t *info = NULL;
-    uint8_t line[NAME_MAX];
+    char *info = NULL;
+    char line[NAME_MAX];
     char path[NAME_MAX];
     char *p;
 
     BufLenSav=*pBufLen;
 
-    info = (uint8_t*)calloc(NAME_MAX, sizeof(uint8_t));
+    info = (char *)calloc(NAME_MAX, sizeof(char));
     if (info == NULL)
     {
         EAPI_LIB_RETURN_ERROR(
@@ -89,22 +89,22 @@ EApiBoardGetStringAEmul(
     }
 
     if (Id == EAPI_ID_BOARD_MANUFACTURER_STR)
-        info = eeprom_analyze(eepromBuffer,MANUFACTURE_TYPE,MANUFACTURE_ASCII_IND);
+        info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_TYPE,MANUFACTURE_ASCII_IND);
 
     else if (Id == EAPI_ID_BOARD_NAME_STR)
-        info = eeprom_analyze(eepromBuffer,PRODUCT_TYPE,PRODUCT_ASCII_IND);
+        info = (char*)eeprom_analyze(eepromBuffer,PRODUCT_TYPE,PRODUCT_ASCII_IND);
 
     else if (Id ==  EAPI_ID_BOARD_SERIAL_STR)
-        info = eeprom_analyze(eepromBuffer,SN_TYPE,SN_ASCII_IND);
+        info =(char*) eeprom_analyze(eepromBuffer,SN_TYPE,SN_ASCII_IND);
 
     else if ((Id ==  EAPI_ID_BOARD_HW_REVISION_STR) ||
              ( Id == EAPI_ID_BOARD_REVISION_STR))
-        info = eeprom_analyze(eepromBuffer,VERSION_TYPE,VERSION_ASCII_IND);
+        info = (char*)eeprom_analyze(eepromBuffer,VERSION_TYPE,VERSION_ASCII_IND);
 
     else if (Id ==  EAPI_DMO_ID_BOARD_MANUFACTURING_DATE_STR)
-        info = eeprom_analyze(eepromBuffer,MANUFACTURE_DATE_TYPE,MANUFACTURE_DATE_ASCII_IND);
+        info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_DATE_TYPE,MANUFACTURE_DATE_ASCII_IND);
     else if (Id ==  EAPI_DMO_ID_BOARD_ID_STR)
-        info = eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
+        info = (char*)eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
     else if (Id == EAPI_ID_BOARD_BIOS_REVISION_STR)
     {
         strncpy(path, BOARDINFO_PATH"bios_version", sizeof(BOARDINFO_PATH"bios_version"));
@@ -185,7 +185,7 @@ EApiBoardGetStringAEmul(
 
     if(BufLenSav && (pBuffer!=NULL))
     {
-        snprintf(pBuffer,BufLenSav,info);
+        snprintf(pBuffer,BufLenSav,"%s",info);
         pBuffer[BufLenSav-1]='\0';
     }
 
@@ -307,17 +307,22 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/fan1_input"),HWMON_PATH"%s/fan1_input",hwname);
-        break;
-    case EAPI_ID_HWMON_FAN_SYSTEM:
-        EAPI_LIB_RETURN_ERROR_IF(
-                    EApiBoardGetValueEmul,
-                    (hwname==NULL),
-                    EAPI_STATUS_ERROR,
-                    "Error finding HWMON"
-                    );
         snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/fan2_input"),HWMON_PATH"%s/fan2_input",hwname);
         break;
+    case EAPI_ID_HWMON_FAN_SYSTEM:
+        EAPI_LIB_RETURN_ERROR(
+                    EApiBoardGetValueEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unsupported ID"
+                    );
+//        EAPI_LIB_RETURN_ERROR_IF(
+//                    EApiBoardGetValueEmul,
+//                    (hwname==NULL),
+//                    EAPI_STATUS_ERROR,
+//                    "Error finding HWMON"
+//                    );
+//        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/fan1_input"),HWMON_PATH"%s/fan1_input",hwname);
+//        break;
     case EAPI_ID_HWMON_VOLTAGE_VCORE:
         *pValue=0xffffff;
                 EAPI_LIB_RETURN_ERROR(
@@ -383,11 +388,10 @@ EApiBoardGetValueEmul(
                     );
     }
 
-
     f = fopen(path, "r");
     if (f != NULL)
     {
-        int res = fscanf(f, "%d", &value);
+        int res = fscanf(f, "%" PRIu32, &value);
         if (res < 0)
         {
             snprintf(err,sizeof(err),"Error during read operation: %s\n ",strerror(errno));
@@ -408,7 +412,11 @@ EApiBoardGetValueEmul(
     }
 
     if(Id == EAPI_ID_HWMON_VOLTAGE_VBAT && value!=0xffffff)
+    {
         *pValue = (value * 1702) / 1000;
+        if (*pValue < 2000) // less than 2V means no Battery
+            *pValue = 0xffffff;
+    }
     else if(Id == EAPI_ID_HWMON_VOLTAGE_5VSB && value!=0xffffff)
         *pValue = (value * 3000) / 1000;
     else if(Id == EAPI_ID_HWMON_VOLTAGE_12V && value!=0xffffff)
@@ -423,8 +431,8 @@ EApiBoardGetValueEmul(
     if (*pValue==0xffffff)
         EAPI_LIB_RETURN_ERROR(
                     EApiBoardGetValueEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Unsupported Value"
+                    EAPI_STATUS_ERROR  ,
+                    "Invalid Value"
                     );
 
     EAPI_LIB_RETURN_SUCCESS(EApiBoardGetValueEmul, "");

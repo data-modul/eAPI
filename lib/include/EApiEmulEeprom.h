@@ -10,7 +10,7 @@ extern "C" {
 
 #define I2C_DMEC "i2c-dmec"
 #define EEPROM_DEVICE  0x50
-#define EEPROM_SIZE  256
+#define EEPROM_SIZE  512
 
 struct i2c_adap {
 	int nr;

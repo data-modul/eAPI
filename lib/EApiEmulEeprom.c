@@ -155,11 +155,11 @@ int find_eeprom(void)
     for (count = 0; adapters[count].name; count++) {
         if (!strncmp(adapters[count].name, I2C_DMEC,8))
         {
-            result = adapters[count].nr;
-            free_adapters(adapters);
+            result = adapters[count].nr +1;
             break;
         }
     }
+    free_adapters(adapters);
     return result;
 }
 
@@ -172,17 +172,13 @@ uint8_t *eeprom_analyze(uint8_t *eeprom,uint8_t type, uint8_t reqIndex)
     int counter = 0;
     int i =0;
     uint8_t *temp;
-
     if (eeprom == NULL)
         return NULL;
-
     if (eeprom [1]!= '3' && eeprom[2] != 'P')
         return NULL;
-
     temp = calloc (100, sizeof(uint8_t));
     if (temp == NULL)
         return NULL;
-
     startDBIndex = eeprom[4] * 2;
     lenDBIndex = eeprom[startDBIndex + 1] << 8;
     lenDBIndex |= eeprom[startDBIndex + 2];
@@ -234,7 +230,6 @@ uint8_t *eeprom_analyze(uint8_t *eeprom,uint8_t type, uint8_t reqIndex)
         endDBIndex = lenDBIndex + startDBIndex;
     } while (endDBIndex < EEPROM_SIZE);
 
-    //memset(temp,'\0',100);
     temp = NULL;
     return temp;
 }
