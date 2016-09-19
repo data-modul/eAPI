@@ -49,7 +49,8 @@
  *
  */
 #define TEMP_PATH "/sys/class/thermal/thermal_zone0/temp"
-#define RUNTIME_PATH "/proc/uptime"
+#define RUNTIME_PATH "/sys/bus/platform/drivers/dmec-rtm/dmec-rtm.3/rtm_time"
+#define BOOT_COUNTER_PATH "/sys/bus/platform/drivers/dmec-rtm/dmec-rtm.3/rtm_boot_count"
 #define BOARDINFO_PATH "/sys/class/dmi/id/"
 
 /*
@@ -244,11 +245,8 @@ EApiBoardGetValueEmul(
     switch (Id)
     {
     case EAPI_ID_BOARD_BOOT_COUNTER_VAL:
-        EAPI_LIB_RETURN_ERROR(
-                    EApiBoardGetValueEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Unsupported ID"
-                    );
+        snprintf(path,sizeof(BOOT_COUNTER_PATH),BOOT_COUNTER_PATH);
+		break;
     case EAPI_ID_BOARD_RUNNING_TIME_METER_VAL:
         snprintf(path,sizeof(RUNTIME_PATH),RUNTIME_PATH);
         break;
