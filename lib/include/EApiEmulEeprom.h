@@ -22,7 +22,7 @@ struct i2c_adap *gather_i2c_busses(void);
 void free_adapters(struct i2c_adap *adapters);
 int find_eeprom(void);
 uint8_t *eeprom_analyze(uint8_t *eeprom, uint8_t type, uint8_t
-		reqIndex);
+        reqIndex);
 
 #ifdef __cplusplus
 }

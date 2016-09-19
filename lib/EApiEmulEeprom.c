@@ -173,11 +173,15 @@ uint8_t *eeprom_analyze(uint8_t *eeprom,uint8_t type, uint8_t reqIndex)
     int i =0;
     uint8_t *temp;
     if (eeprom == NULL)
+    {
         return NULL;
+    }
     if (eeprom [1]!= '3' && eeprom[2] != 'P')
+    {
         return NULL;
-    temp = calloc (100, sizeof(uint8_t));
-    if (temp == NULL)
+    }
+    temp = calloc (NAME_MAX, sizeof(uint8_t));
+    if (!temp)
         return NULL;
     startDBIndex = eeprom[4] * 2;
     lenDBIndex = eeprom[startDBIndex + 1] << 8;
@@ -187,7 +191,9 @@ uint8_t *eeprom_analyze(uint8_t *eeprom,uint8_t type, uint8_t reqIndex)
 
     do {
         if(eeprom[startDBIndex + 3] == type)
+        {
             reqLoc = eeprom[startDBIndex + reqIndex];
+        }
         else
         {
             startDBIndex = endDBIndex;
@@ -230,6 +236,6 @@ uint8_t *eeprom_analyze(uint8_t *eeprom,uint8_t type, uint8_t reqIndex)
         endDBIndex = lenDBIndex + startDBIndex;
     } while (endDBIndex < EEPROM_SIZE);
 
-    temp = NULL;
-    return temp;
+    free(temp);
+    return NULL;
 }

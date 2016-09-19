@@ -62,8 +62,8 @@
  *
  */
 
-EApiStatus_t 
-EApiBoardGetStringAEmul( 
+EApiStatus_t
+EApiBoardGetStringAEmul(
         __IN    EApiId_t  Id      ,
         __OUT       char *pBuffer ,
         __INOUT uint32_t *pBufLen
@@ -79,15 +79,14 @@ EApiBoardGetStringAEmul(
 
     BufLenSav=*pBufLen;
 
-    info = (char *)calloc(NAME_MAX, sizeof(char));
-    if (info == NULL)
-    {
-        EAPI_LIB_RETURN_ERROR(
-                    EApiBoardGetStringAEmul,
-                    EAPI_STATUS_ALLOC_ERROR,
-                    "Error in Allocating Memory");
-    }
-
+   // info = (char *)calloc(NAME_MAX, sizeof(char));
+//    if (!info)
+//    {
+//        EAPI_LIB_RETURN_ERROR(
+//                    EApiBoardGetStringAEmul,
+//                    EAPI_STATUS_ALLOC_ERROR,
+//                    "Error in Allocating Memory");
+//    }
     if (Id == EAPI_ID_BOARD_MANUFACTURER_STR)
         info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_TYPE,MANUFACTURE_ASCII_IND);
 
@@ -95,18 +94,31 @@ EApiBoardGetStringAEmul(
         info = (char*)eeprom_analyze(eepromBuffer,PRODUCT_TYPE,PRODUCT_ASCII_IND);
 
     else if (Id ==  EAPI_ID_BOARD_SERIAL_STR)
-        info =(char*) eeprom_analyze(eepromBuffer,SN_TYPE,SN_ASCII_IND);
+        info = (char*)eeprom_analyze(eepromBuffer,SN_TYPE,SN_ASCII_IND);
 
     else if ((Id ==  EAPI_ID_BOARD_HW_REVISION_STR) ||
              ( Id == EAPI_ID_BOARD_REVISION_STR))
         info = (char*)eeprom_analyze(eepromBuffer,VERSION_TYPE,VERSION_ASCII_IND);
-
     else if (Id ==  EAPI_DMO_ID_BOARD_MANUFACTURING_DATE_STR)
         info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_DATE_TYPE,MANUFACTURE_DATE_ASCII_IND);
     else if (Id ==  EAPI_DMO_ID_BOARD_ID_STR)
         info = (char*)eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
+
+
+
+
+
+
     else if (Id == EAPI_ID_BOARD_BIOS_REVISION_STR)
     {
+        info = (char *)calloc(NAME_MAX, sizeof(char));
+        if (!info)
+        {
+            EAPI_LIB_RETURN_ERROR(
+                        EApiBoardGetStringAEmul,
+                        EAPI_STATUS_ALLOC_ERROR,
+                        "Error in Allocating Memory");
+        }
         strncpy(path, BOARDINFO_PATH"bios_version", sizeof(BOARDINFO_PATH"bios_version"));
         f = fopen(path, "r");
         if (f != NULL)
@@ -122,11 +134,9 @@ EApiBoardGetStringAEmul(
                             err
                             );
             }
-
             p=strrchr(line, '\n');//search last space
             *p = '\0';//split at last space
             strcpy(info, line);
-
             fclose(f);
         }
         else
@@ -140,6 +150,14 @@ EApiBoardGetStringAEmul(
     }
     else if (Id == EAPI_ID_BOARD_PLATFORM_TYPE_STR)
     {
+        info = (char *)calloc(NAME_MAX, sizeof(char));
+        if (!info)
+        {
+            EAPI_LIB_RETURN_ERROR(
+                        EApiBoardGetStringAEmul,
+                        EAPI_STATUS_ALLOC_ERROR,
+                        "Error in Allocating Memory");
+        }
 #if (EAPI_PLATFORM==EAPI_PLATFORM_COM0)
         strncpy(info, EAPI_COM0_PLATFORM_STR, sizeof(EAPI_COM0_PLATFORM_STR));
 #elif (EAPI_PLATFORM==EAPI_PLATFORM_ETX)
@@ -158,8 +176,6 @@ EApiBoardGetStringAEmul(
                     EAPI_STATUS_UNSUPPORTED  ,
                     "Unrecognised String ID"
                     );
-
-
     /*
          * Basically equivilant to
          * strncpy(pBuffer, info, *pBufLen);
@@ -175,7 +191,6 @@ EApiBoardGetStringAEmul(
                     "The board string info is not found."
                     );
     }
-
     *pBufLen=(uint32_t)strlen(info)+1;
 
     if(BufLenSav<*pBufLen)
@@ -188,7 +203,6 @@ EApiBoardGetStringAEmul(
         snprintf(pBuffer,BufLenSav,"%s",info);
         pBuffer[BufLenSav-1]='\0';
     }
-
     EAPI_LIB_RETURN_ERROR_IF(
                 EApiBoardGetStringAEmul,
                 (StatusCode==EAPI_STATUS_MORE_DATA),
@@ -202,6 +216,8 @@ EApiBoardGetStringAEmul(
                 );
 
     EAPI_LIB_ASSERT_EXIT
+           if(info)
+            free(info);
             return StatusCode;
 }
 
@@ -215,7 +231,7 @@ EApiBoardGetStringAEmul(
  *
  */
 EApiStatus_t
-EApiBoardGetValueEmul( 
+EApiBoardGetValueEmul(
         __IN  EApiId_t Id     ,
         __OUT uint32_t *pValue
         )

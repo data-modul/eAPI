@@ -192,7 +192,7 @@ EApiInitLib(){
   {
       // read eeprom
       eepromBuffer = (uint8_t *)calloc(EEPROM_SIZE, sizeof(uint8_t));
-      if (eepromBuffer == NULL)
+      if (!eepromBuffer)
       {
           snprintf(err,sizeof(err),"Error in Eeprom Allocating Memory\n");
           printf("%s",err);
@@ -265,26 +265,16 @@ EApiInitLib(){
       }
       /* ********************************************** */
       /* detect_board_type */
-      pBoradType=(uint8_t *)malloc((NAME_MAX) * sizeof(uint8_t));
-      if (pBoradType != NULL)
+      pBoradType = eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
+      borad_type = UNKNOWN;
+      if (pBoradType)
       {
-          pBoradType = eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
-          if (pBoradType != NULL)
-          {
-              if(!strncmp((const char*)pBoradType,"BBW6",4))
-                  borad_type = BBW6;
-              else if(!strncmp((const char*)pBoradType,"CBS6",4))
-                  borad_type = CBS6;
-              else
-                  borad_type = UNKNOWN;
-          }
-          else
-              borad_type = UNKNOWN;
-
+          if(!strncmp((const char*)pBoradType,"BBW6",4))
+              borad_type = BBW6;
+          else if(!strncmp((const char*)pBoradType,"CBS6",4))
+              borad_type = CBS6;
           free(pBoradType);
       }
-      else
-          borad_type = UNKNOWN;
   }
   else
   {
