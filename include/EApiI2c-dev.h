@@ -71,9 +71,6 @@ union i2c_smbus_data {
  *»·····- I2C_RDWR, takes pointer to struct i2c_rdwr_ioctl_data
  *»·····- I2C_SMBUS, takes pointer to struct i2c_smbus_ioctl_data
 */
-//#define I2C_RETRIES     0x0701»·/* number of times a device address should be polled when not acknowledging */
-//#define I2C_TIMEOUT     0x0702»·/* set timeout in units of 10 ms */
-
 /* NOTE: Slave address is 7 or 10 bits, but 10-bit addresses
  * are NOT supported! (due to code brokenness)
 */
@@ -178,58 +175,4 @@ static inline __s32 i2c_smbus_write_block_data(int file, __u8 command,__u8 lengt
     return i2c_smbus_access(file,I2C_SMBUS_WRITE,command,I2C_SMBUS_BLOCK_DATA, &data);
 }
 
-
-//while (iRead < ReadBCnt)
-//{
-//if (flag == 0 && no_add != 1 )
-//{
-//    if (size == I2C_SMBUS_BYTE_DATA)
-//        res = i2c_smbus_write_byte_data(i2cDescriptor,(daddress >> 8) & 0x0ff, daddress & 0x0ff); //write 16bits add
-//    else if (size == I2C_SMBUS_BYTE)
-//        res = i2c_smbus_write_byte(i2cDescriptor,daddress & 0x0ff);
-
-//    flag = 1; // cmd write is done, no needed more
-//    if (res < 0)
-//    {
-//        close(i2cDescriptor);
-//        if (res == -ETIMEDOUT)
-//            EAPI_LIB_RETURN_ERROR(
-//                        EApiI2CWriteReadEmul,
-//                        EAPI_STATUS_TIMEOUT,
-//                        "i2c writing failed: time-out");
-//        else
-//            EAPI_LIB_RETURN_ERROR(
-//                    EApiI2CWriteReadEmul,
-//                    EAPI_STATUS_WRITE_ERROR,
-//                    "Cmd-i2c writing failed");
-//        break;
-//    }
-//}
-
-//res = i2c_smbus_read_byte(i2cDescriptor);
-//if (res < 0){
-//    close(i2cDescriptor);
-//    if (res == -ETIMEDOUT)
-//        EAPI_LIB_RETURN_ERROR(
-//                    EApiI2CWriteReadEmul,
-//                    EAPI_STATUS_TIMEOUT,
-//                    "i2c reading failed: time-out");
-//    else
-//        EAPI_LIB_RETURN_ERROR(
-//                EApiI2CWriteReadEmul,
-//                EAPI_STATUS_READ_ERROR,
-//                "i2c reading failed");
-//}
-//else
-//    LpRBuffer[iRead] = (uint8_t)res;
-
-//iRead++;
-//}
-
-
-
-
-
-
-
-#endif // EAPII2CDEV_H
+#endif /* EAPII2CDEV_H */

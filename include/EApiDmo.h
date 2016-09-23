@@ -1,7 +1,7 @@
-//
-// EApiDmo.h
-// EApi Data Modul Extensions
-//
+/*
+* EApiDmo.h
+* EApi Data Modul Extensions
+*/
 
 #ifndef EAPIDMO_H
 #define EAPIDMO_H
@@ -19,8 +19,8 @@
 #define HWMON_NAME "nct7802"
 
 extern uint8_t *eepromBuffer;
-extern int borad_type;
+extern int board_type;
 extern char *hwname;
 extern char err[256];
 
-#endif // EAPIDMO_H
+#endif /* EAPIDMO_H */

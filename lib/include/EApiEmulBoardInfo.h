@@ -74,9 +74,6 @@ EApiBoardGetStringAEmul(
     __INOUT uint32_t *pBufLen
     );
 
-
-//char* find_hwmon(void);
-
 #ifdef __cplusplus
 }
 #endif

@@ -228,7 +228,7 @@ uint8_t *eeprom_analyze(uint8_t *eeprom,uint8_t type, uint8_t reqIndex)
             index++;
         }
 
-        //move to next DBlock
+        /* move to next DBlock */
         startDBIndex = endDBIndex;
         lenDBIndex = eeprom[startDBIndex + 1] << 8;
         lenDBIndex |= eeprom[startDBIndex + 2];

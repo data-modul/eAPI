@@ -99,8 +99,9 @@ EApiI2CWriteReadRaw(
                                            */
         )
 {
+
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-    EApiStatus_t ErrorCode2;
+    EApiStatus_t ErrorCode2 = EAPI_STATUS_SUCCESS;
     EAPI_CHECK_INITIALIZED(EApiI2CWriteReadRaw);
 
     EAPI_LIB_ASSERT_PARAMATER_CHECK(
@@ -117,16 +118,16 @@ EApiI2CWriteReadRaw(
                 "Info"                ,
                 "ADDR=%02"PRIX8" WriteBCnt=%04"PRIX32
                 " RBufLen=%04"PRIX32" WriteBCnt=%04"PRIX32
-                " ReadBCnt=%04"PRIX32" %08"PRIX32"\n",
-                Addr, WriteBCnt, RBufLen, WriteBCnt, ReadBCnt,
-                (WriteBCnt?((uint32_t*)pWBuffer)[0]:0)
+                " ReadBCnt=%04"PRIX32"\n",
+                Addr, WriteBCnt, RBufLen, WriteBCnt, ReadBCnt
                 );
 #endif
-    //  EAPI_LIB_ASSERT_PARAMATER_CHECK(
-    //      EApiI2CWriteReadRaw,
-    //      (ReadBCnt>1)&&(pRBuffer==NULL) ,
-    //      "pRBuffer is NULL"
-    //      );
+    /*  EAPI_LIB_ASSERT_PARAMATER_CHECK(
+          EApiI2CWriteReadRaw,
+          (ReadBCnt>1)&&(pRBuffer==NULL) ,
+          "pRBuffer is NULL"
+          ); */
+
     EAPI_LIB_ASSERT_PARAMATER_CHECK(
                 EApiI2CWriteReadRaw,
                 (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
@@ -149,7 +150,6 @@ EApiI2CWriteReadRaw(
                 RBufLen+1
                 );
 
-
     ErrorCode2=EApiI2CWriteReadEmul(
                 Id,
                 Addr,
@@ -158,6 +158,7 @@ EApiI2CWriteReadRaw(
                 pRBuffer,
                 ReadBCnt
                 );
+
     if(ErrorCode2!=EAPI_STATUS_SUCCESS)
         StatusCode=ErrorCode2;
     EAPI_LIB_ASSERT_EXIT
@@ -190,7 +191,7 @@ EApiI2CReadTransfer(
     siFormattedMessage_M2(
                 'L'                   ,
                 __FILE__              ,
-                "EApiI2CWriteTransfer",
+                "EApiI2CReadTransfer",
                 __LINE__              ,
                 "Info"                ,
                 "Id=%08"PRIX32" ADDR=%04"PRIX32
@@ -252,6 +253,7 @@ EApiI2CWriteTransfer(
         __IN  uint32_t  ByteCnt   /* Byte Count to write */
         )
 {
+
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     uint8_t * pLclBuffer;
     uint32_t LclByteCnt=0;
@@ -259,8 +261,8 @@ EApiI2CWriteTransfer(
 
     EAPI_CHECK_INITIALIZED(EApiI2CWriteTransfer);
 
-
     EAPI_LIB_ASSERT_PARAMATER_NULL(EApiI2CWriteTransfer, pBuffer);
+
 #if (STRICT_VALIDATION>1)
     siFormattedMessage_M2(
                 'L'                   ,
@@ -269,10 +271,11 @@ EApiI2CWriteTransfer(
                 __LINE__              ,
                 "Info"                ,
                 "Id=%08"PRIX32" ADDR=%04"PRIX32
-                " CMD=%04"PRIX32" BCNT=%04"PRIX32" %08"PRIX32"\n",
-                Id, Addr, Cmd, ByteCnt, ((uint32_t*)pBuffer)[0]
+                " CMD=%04"PRIX32" BCNT=%04"PRIX32"\n",
+                Id, Addr, Cmd, ByteCnt
             );
 #endif
+
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiI2CWriteTransfer, ByteCnt);
 
     pLclBuffer=(uint8_t *)malloc(ByteCnt+3);
@@ -319,23 +322,20 @@ EApiI2CWriteTransfer(
                 __LINE__              ,
                 "Info"                ,
                 "Id=%08"PRIX32" ADDR=%04"PRIX32" CMD=%04"PRIX32
-                " BCNT=%04"PRIX32" %08"PRIX32"\n",
-                Id, Addr, Cmd, ByteCnt,
-                ((uint32_t*)pLclBuffer)[0]
+                " BCNT=%04"PRIX32"\n",
+                Id, Addr, Cmd, ByteCnt
             );
 #endif
 
-    //  StatusCode=EApiI2CWriteReadRaw(
-    //      Id,
-    //      (uint8_t)Addr,
-    //      pLclBuffer,
-    //      LclByteCnt+ByteCnt+1,
-    //      NULL,
-    //      0,
-    //      0
-    //      );
-
-
+    /*  StatusCode=EApiI2CWriteReadRaw(
+          Id,
+          (uint8_t)Addr,
+          pLclBuffer,
+          LclByteCnt+ByteCnt+1,
+          NULL,
+          0,
+          0
+          ); */
     StatusCode=EApiI2CWriteReadRaw(
                 Id,
                 (uint8_t)Addr,
@@ -345,8 +345,7 @@ EApiI2CWriteTransfer(
                 LclByteCnt,
                 LclByteCnt
                 );
-    // if(StatusCode == 0)
-    // printf("hallo\n");
+
     if(LclByteCnt)
         free(pLclBuffer);
     EAPI_LIB_ASSERT_EXIT

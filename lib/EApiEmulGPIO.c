@@ -68,7 +68,7 @@
 typedef uint32_t ReadPortFunction (uint32_t);
 typedef void     WritePortFunction (uint32_t, uint32_t);
 
-///* Psuedo IO Ports & Defaults */
+/* Psuedo IO Ports & Defaults */
 #define GPIO_LEVEL_DFLT ((EAPI_GPIO_HIGH<<GPI0_PORT_BIT)| (EAPI_GPIO_LOW <<GPI1_PORT_BIT)|\
                          (EAPI_GPIO_LOW <<GPI2_PORT_BIT)| (EAPI_GPIO_HIGH<<GPI3_PORT_BIT)|\
                          (EAPI_GPIO_LOW <<GPO0_PORT_BIT)| (EAPI_GPIO_LOW <<GPO1_PORT_BIT)|\

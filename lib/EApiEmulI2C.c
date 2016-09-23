@@ -99,14 +99,16 @@ EApiI2CWriteReadEmul(
         __IN      uint32_t ReadBCnt
         )
 {
+
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     uint32_t LclAddr;
-    ////
+
     int i2cDescriptor = 0;
     char devname[20];
-    int i2cbus; //Id
+    int i2cbus;
     int sizeDev = sizeof(devname);
     int size = I2C_SMBUS_BYTE;
+    int funcs;
     uint32_t daddress=0;
 
     if (Id > 0xFFFF)
@@ -131,7 +133,7 @@ EApiI2CWriteReadEmul(
         LclAddr|=*((uint8_t *)pWBuffer);
         pWBuffer=((uint8_t *)pWBuffer)+1;
         WriteBCnt--;
-        if (ReadBCnt > 0 && pRBuffer==NULL) //means some data in wbuffer is not for write, there are info
+        if (ReadBCnt > 0 && pRBuffer==NULL) /*means some data in wbuffer is not for write, there are info */
             ReadBCnt--;
     }
     else
@@ -149,16 +151,16 @@ EApiI2CWriteReadEmul(
                 );
 #endif
 
-    if (ReadBCnt > 0 && pRBuffer!=NULL) // it means func is called for ReadTransfer
+    if (ReadBCnt > 0 && pRBuffer!=NULL) /* it means func is called for ReadTransfer */
     {
-        if(WriteBCnt > 1) //there is a Cmd
+        if(WriteBCnt > 1) /*there is a Cmd */
         {
-            //cmd is 8 bit
+            /*cmd is 8 bit */
             size = CMD_TYPE_8BIT;
             daddress=*((uint8_t *)pWBuffer);
             WriteBCnt--;
 
-            //cmd is 16bits
+            /* cmd is 16bits */
             if (WriteBCnt > 1)
             {
                 size = CMD_TYPE_16BIT;
@@ -166,21 +168,21 @@ EApiI2CWriteReadEmul(
                 WriteBCnt--;
             }
         }
-        else //no-cmd
+        else /* no-cmd */
         {
             size = CMD_TYPE_0BIT;
         }
     }
-    else if (ReadBCnt > 0 && pRBuffer==NULL)// it means func is called  for WriteTransfer
+    else if (ReadBCnt > 0 && pRBuffer==NULL)/* it means func is called  for WriteTransfer */
     {
-        if (ReadBCnt == 1) // it has only 1byte-Cmd
+        if (ReadBCnt == 1) /* it has only 1byte-Cmd */
         {
             daddress = *((uint8_t *)pWBuffer);
             pWBuffer=((uint8_t *)pWBuffer)+1;
             WriteBCnt--;
             size = CMD_TYPE_8BIT;
         }
-        else if (ReadBCnt == 2)// it has 2bytes-Cmd
+        else if (ReadBCnt == 2)/* it has 2bytes-Cmd */
         {
             daddress = (uint32_t)(*((uint8_t *)pWBuffer) <<8);
             daddress|=(uint32_t)*(((uint8_t *)pWBuffer+1));
@@ -190,13 +192,13 @@ EApiI2CWriteReadEmul(
             ReadBCnt=ReadBCnt-2;
             size = CMD_TYPE_16BIT;
         }
-        else //no-cmd
+        else /* no-cmd */
         {
             size = CMD_TYPE_0BIT;
         }
     }
 
-    // open device
+    /* open device */
     snprintf(devname,sizeDev,"/dev/i2c/%d",i2cbus);
     devname[sizeDev - 1] = '\0';
     i2cDescriptor = open(devname,O_RDWR);
@@ -216,8 +218,7 @@ EApiI2CWriteReadEmul(
                    err);
     }
 
-    // get funcs list
-    int funcs;
+    /* get funcs list */
     if(ioctl(i2cDescriptor, I2C_FUNCS, &funcs) < 0)
     {
         snprintf(err,sizeof(err),"Unrecognised i2c funcs: %s\n",strerror(errno));
@@ -227,7 +228,7 @@ EApiI2CWriteReadEmul(
                     err);
     }
 
-    // check for req funcs
+    /* check for req funcs */
     CHECK_I2C_FUNC( funcs, I2C_FUNC_SMBUS_READ_BYTE );
     CHECK_I2C_FUNC( funcs, I2C_FUNC_SMBUS_WRITE_BYTE );
     CHECK_I2C_FUNC( funcs, I2C_FUNC_SMBUS_READ_BYTE_DATA );
@@ -235,7 +236,7 @@ EApiI2CWriteReadEmul(
     CHECK_I2C_FUNC( funcs, I2C_FUNC_SMBUS_READ_WORD_DATA );
     CHECK_I2C_FUNC( funcs, I2C_FUNC_SMBUS_WRITE_WORD_DATA );
 
-    // set slave address : set working device
+    /* set slave address : set working device */
     if(ioctl(i2cDescriptor, I2C_SLAVE, LclAddr) < 0)
     {
         snprintf(err,sizeof(err),"Cannot set i2c slave ddress: %s\n",strerror(errno));
@@ -244,7 +245,7 @@ EApiI2CWriteReadEmul(
                     EAPI_STATUS_NOT_FOUND,
                     err);
     }
-    //  write to the device
+    /*  write to the device */
     if (WriteBCnt > 1)
         WriteBCnt--;
     else
@@ -255,7 +256,7 @@ EApiI2CWriteReadEmul(
         int res = 0;
         uint8_t value;
 
-        if ((size == CMD_TYPE_8BIT) && (WriteBCnt == 32)) //write block
+        if ((size == CMD_TYPE_8BIT) && (WriteBCnt == 32)) /* write block */
         {
             res = i2c_smbus_write_block_data(i2cDescriptor, daddress & 0x0ff, WriteBCnt, pWBuffer);
             if (res < 0){
@@ -281,17 +282,17 @@ EApiI2CWriteReadEmul(
         {
             while (iWrite < WriteBCnt)
             {
-                if (size == CMD_TYPE_16BIT){ //2bytes cmd
+                if (size == CMD_TYPE_16BIT){ /* 2bytes cmd */
                     value = *((uint8_t *)pWBuffer);
                     res = i2c_smbus_write_word_data(i2cDescriptor,(daddress >> 8) & 0x00ff, value << 8 | (daddress & 0x00ff));
                 }
-                else  if (size == CMD_TYPE_8BIT) // one cmd
+                else  if (size == CMD_TYPE_8BIT) /* one cmd */
                 {
-                    if (pWBuffer == NULL) //no value
+                    if (pWBuffer == NULL) /* no value */
                     {
                         res = i2c_smbus_write_byte(i2cDescriptor,daddress & 0x0ff);
                     }
-                    else // one cmd and values
+                    else /* one cmd and values */
                     {
                         value = *((uint8_t *)pWBuffer);
                         res = i2c_smbus_write_byte_data(i2cDescriptor,daddress & 0x00ff, value);
@@ -327,7 +328,7 @@ EApiI2CWriteReadEmul(
     }
 
 
-    //   Read from the device
+    /*   Read from the device */
     if (ReadBCnt > 1)
         ReadBCnt--;
     else
@@ -367,14 +368,14 @@ EApiI2CWriteReadEmul(
             }
             iRead = res;
         }
-        else //read bytes
+        else /* read bytes */
         {
             while (iRead < ReadBCnt)
             {
                 res = 0;
                 if (size == CMD_TYPE_16BIT)
                 {
-                    res = i2c_smbus_write_byte_data(i2cDescriptor,(daddress >> 8) & 0x0ff, daddress & 0x0ff); //write 16bits add
+                    res = i2c_smbus_write_byte_data(i2cDescriptor,(daddress >> 8) & 0x0ff, daddress & 0x0ff); /* write 16bits add */
                 }
                 else if (size == CMD_TYPE_8BIT)
                 {

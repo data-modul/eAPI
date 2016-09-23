@@ -48,7 +48,6 @@
  *
  *
  */
-#define TEMP_PATH "/sys/class/thermal/thermal_zone0/temp"
 #define RUNTIME_PATH "/sys/bus/platform/drivers/dmec-rtm/dmec-rtm.3/rtm_time"
 #define BOOT_COUNTER_PATH "/sys/bus/platform/drivers/dmec-rtm/dmec-rtm.3/rtm_boot_count"
 #define BOARDINFO_PATH "/sys/class/dmi/id/"
@@ -80,14 +79,6 @@ EApiBoardGetStringAEmul(
 
     BufLenSav=*pBufLen;
 
-   // info = (char *)calloc(NAME_MAX, sizeof(char));
-//    if (!info)
-//    {
-//        EAPI_LIB_RETURN_ERROR(
-//                    EApiBoardGetStringAEmul,
-//                    EAPI_STATUS_ALLOC_ERROR,
-//                    "Error in Allocating Memory");
-//    }
     if (Id == EAPI_ID_BOARD_MANUFACTURER_STR)
         info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_TYPE,MANUFACTURE_ASCII_IND);
 
@@ -104,10 +95,6 @@ EApiBoardGetStringAEmul(
         info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_DATE_TYPE,MANUFACTURE_DATE_ASCII_IND);
     else if (Id ==  EAPI_DMO_ID_BOARD_ID_STR)
         info = (char*)eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
-
-
-
-
 
 
     else if (Id == EAPI_ID_BOARD_BIOS_REVISION_STR)
@@ -135,8 +122,8 @@ EApiBoardGetStringAEmul(
                             err
                             );
             }
-            p=strrchr(line, '\n');//search last space
-            *p = '\0';//split at last space
+            p=strrchr(line, '\n');/* search last space */
+            *p = '\0';/* split at last space */
             strcpy(info, line);
             fclose(f);
         }
@@ -217,8 +204,9 @@ EApiBoardGetStringAEmul(
                 );
 
     EAPI_LIB_ASSERT_EXIT
-           if(info)
+           if(info){
             free(info);
+	   }
             return StatusCode;
 }
 
@@ -271,16 +259,16 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_UNSUPPORTED  ,
                     "Unsupported ID"
                     );
-    case EAPI_ID_HWMON_CPU_TEMP://it is different for BBW6 and CBS6
+    case EAPI_ID_HWMON_CPU_TEMP:/* it is different for BBW6 and CBS6 */
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
                     (hwname==NULL),
                     EAPI_STATUS_ERROR,
                     "Error finding HWMON"
                     );
-        if (borad_type == BBW6)
+        if (board_type == BBW6)
             snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp5_input"),HWMON_PATH"%s/temp5_input",hwname);
-        else if (borad_type == CBS6)
+        else if (board_type == CBS6)
             snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp1_input"),HWMON_PATH"%s/temp1_input",hwname);
         else
             EAPI_LIB_RETURN_ERROR(
@@ -289,14 +277,14 @@ EApiBoardGetValueEmul(
                         "Not support CPU Temperature"
                         );
         break;
-    case EAPI_ID_HWMON_CHIPSET_TEMP://it is different for BBW6 and CBS6
+    case EAPI_ID_HWMON_CHIPSET_TEMP:/* it is different for BBW6 and CBS6 */
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
                     (hwname==NULL),
                     EAPI_STATUS_ERROR,
                     "Error finding HWMON"
                     );
-        if (borad_type == BBW6)
+        if (board_type == BBW6)
             snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp1_input"),HWMON_PATH"%s/temp1_input",hwname);
         else
             EAPI_LIB_RETURN_ERROR(
@@ -329,14 +317,6 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_UNSUPPORTED  ,
                     "Unsupported ID"
                     );
-//        EAPI_LIB_RETURN_ERROR_IF(
-//                    EApiBoardGetValueEmul,
-//                    (hwname==NULL),
-//                    EAPI_STATUS_ERROR,
-//                    "Error finding HWMON"
-//                    );
-//        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/fan1_input"),HWMON_PATH"%s/fan1_input",hwname);
-//        break;
     case EAPI_ID_HWMON_VOLTAGE_VCORE:
         *pValue=0xffffff;
                 EAPI_LIB_RETURN_ERROR(
@@ -408,7 +388,7 @@ EApiBoardGetValueEmul(
         int res = fscanf(f, "%" PRIu32, &value);
         if (res < 0)
         {
-            snprintf(err,sizeof(err),"Error during read operation: %s\n ",strerror(errno));
+            snprintf(err,sizeof(err),"Error during read operation: %s",strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiBoardGetValueEmul,
                         EAPI_STATUS_ERROR  ,
@@ -418,7 +398,7 @@ EApiBoardGetValueEmul(
     }
     else
     {
-        snprintf(err,sizeof(err),"Error in open file operation: %s\n ",strerror(errno));
+        snprintf(err,sizeof(err),"Error in open file operation: %s",strerror(errno));
         EAPI_LIB_RETURN_ERROR(
                     EApiBoardGetValueEmul,
                     EAPI_STATUS_ERROR  ,
@@ -428,7 +408,7 @@ EApiBoardGetValueEmul(
     if(Id == EAPI_ID_HWMON_VOLTAGE_VBAT && value!=0xffffff)
     {
         *pValue = (value * 1702) / 1000;
-        if (*pValue < 2000) // less than 2V means no Battery
+        if (*pValue < 2000) /* less than 2V means no Battery */
             *pValue = 0xffffff;
     }
     else if(Id == EAPI_ID_HWMON_VOLTAGE_5VSB && value!=0xffffff)
@@ -438,7 +418,7 @@ EApiBoardGetValueEmul(
     else if((Id == EAPI_ID_HWMON_CPU_TEMP ||
              Id == EAPI_ID_HWMON_CHIPSET_TEMP ||
              Id == EAPI_ID_HWMON_SYSTEM_TEMP ) && value!=0xffffff)
-        *pValue = (value + 273150)/100; //mCelcius + (273.15*1000)/100 =>0.1K
+        *pValue = (value + 273150)/100; /* mCelcius + (273.15*1000)/100 =>0.1K */
     else
         *pValue=value;
 

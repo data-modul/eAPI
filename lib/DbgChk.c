@@ -124,6 +124,7 @@ siFormattedMessage_M2(
   va_list _ArgList;
 
   va_start(_ArgList, cszFormat);
+
   if (OutputStream) {
   Ret = fprintf(
       OutputStream,
@@ -133,6 +134,7 @@ siFormattedMessage_M2(
       GetLastOccurance(cszFileName),
       cszFuncName
     );
+
   fprintf(OutputStream, "%-25s | ", csz2ndValue);
   Ret += vfprintf(OutputStream, cszFormat, _ArgList);
     }

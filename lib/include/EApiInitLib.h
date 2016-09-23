@@ -60,7 +60,7 @@ uint32_t
 EApiUninitLib();
 EApiStatus_t find_hwmon(char **result);
 EApiStatus_t read_eeprom(int eeprom_bus,char **pBuf);
-
+EApiStatus_t fill_eepromBuffer(uint8_t **result);
 
 #ifndef EAPI_LIB_MSG_OUT
 #  if 0
