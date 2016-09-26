@@ -224,7 +224,8 @@ $(BuildDir)/%.o:$(PrgFldr)/%.cpp
 $(LIBDIR)/$(SoFName): $(DBinFolder)/$(SoFName)
 	$(info Default Install Directory is $(PREFIX). For changing please set\
 		PREFIX and run again.)
-	cp --force $< $(@)
+	@mkdir -p $(LIBDIR)
+	cp --force  $< $(@)
 	@chmod 755 $(@)
 	@ln --force --symbolic $(SoFName) $(dir $(@))$(SoName)
 	@ln --force --symbolic $(SoFName) $(dir $(@))$(SymLinkName)
