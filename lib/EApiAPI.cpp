@@ -178,7 +178,6 @@ EApiI2CReadTransfer(
         __IN  uint32_t  ByteCnt   /* Byte Count to read */
         )
 {
-
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     uint8_t LclpBuffer[8]={0};
     int LclByteCnt=0;
@@ -227,7 +226,6 @@ EApiI2CReadTransfer(
 
         LclpBuffer[LclByteCnt++]=(uint8_t)(Cmd&0xFF);
     }
-
     StatusCode=EApiI2CWriteReadRaw(
                 Id,
                 (uint8_t)Addr,

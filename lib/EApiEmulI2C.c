@@ -99,7 +99,6 @@ EApiI2CWriteReadEmul(
         __IN      uint32_t ReadBCnt
         )
 {
-
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     uint32_t LclAddr;
 
@@ -164,6 +163,7 @@ EApiI2CWriteReadEmul(
             if (WriteBCnt > 1)
             {
                 size = CMD_TYPE_16BIT;
+                daddress = daddress << 8 ;
                 daddress|=*(((uint8_t *)pWBuffer+1));
                 WriteBCnt--;
             }
@@ -186,7 +186,6 @@ EApiI2CWriteReadEmul(
         {
             daddress = (uint32_t)(*((uint8_t *)pWBuffer) <<8);
             daddress|=(uint32_t)*(((uint8_t *)pWBuffer+1));
-
             pWBuffer=((uint8_t *)pWBuffer)+2;
             WriteBCnt=WriteBCnt-2;
             ReadBCnt=ReadBCnt-2;
@@ -197,7 +196,6 @@ EApiI2CWriteReadEmul(
             size = CMD_TYPE_0BIT;
         }
     }
-
     /* open device */
     snprintf(devname,sizeDev,"/dev/i2c/%d",i2cbus);
     devname[sizeDev - 1] = '\0';
