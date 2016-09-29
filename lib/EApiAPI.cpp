@@ -81,8 +81,90 @@ EApiI2CGetBusCap(
             return StatusCode;
 }
 
-EApiStatus_t 
+EApiStatus_t
 EAPI_CALLTYPE 
+EApiI2CWriteReadRawSpecific(
+        __IN     EApiId_t  Id       , /* I2C Bus Id */
+        __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
+                                           * Device Address
+                                           */
+        __INOPT  uint8_t     *pWBuffer , /* Write Data pBuffer */
+        __IN     uint32_t  WriteBCnt, /* Number of Bytes to write */
+         __IN     uint32_t  CmdBCnt, /* Number of Cmd Bytes to write */
+        __OUTOPT uint8_t     *pRBuffer , /* Read Data pBuffer */
+        __IN     uint32_t  RBufLen  , /* Data pBuffer Length */
+        __IN     uint32_t  ReadBCnt   /* Number of Bytes to
+                                           * Read
+                                           */
+        )
+{
+
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+    EApiStatus_t ErrorCode2 = EAPI_STATUS_SUCCESS;
+    EAPI_CHECK_INITIALIZED(EApiI2CWriteReadRawSpecific);
+
+    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+                EApiI2CWriteReadRawSpecific,
+                (WriteBCnt>1)&&(pWBuffer==NULL),
+                "pWBuffer is NULL"
+                );
+#if (STRICT_VALIDATION>1)
+    siFormattedMessage_M2(
+                'L'                   ,
+                __FILE__              ,
+                "EApiI2CWriteReadRawSpecific",
+                __LINE__              ,
+                "Info"                ,
+                "ADDR=%02"PRIX8" WriteBCnt=%04"PRIX32
+                " RBufLen=%04"PRIX32" WriteBCnt=%04"PRIX32
+                " ReadBCnt=%04"PRIX32"\n",
+                Addr, WriteBCnt, RBufLen, WriteBCnt, ReadBCnt
+                );
+#endif
+      EAPI_LIB_ASSERT_PARAMATER_CHECK(
+          EApiI2CWriteReadRawSpecific,
+          (ReadBCnt>1)&&(pRBuffer==NULL) ,
+          "pRBuffer is NULL"
+          );
+
+//    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+//                EApiI2CWriteReadRaw,
+//                (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
+//                "pRBuffer is NULL"
+//                );
+    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+                EApiI2CWriteReadRawSpecific,
+                (ReadBCnt>1)&&(RBufLen==0) ,
+                "RBufLen is ZERO"
+                );
+    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+                EApiI2CWriteReadRawSpecific,
+                ((WriteBCnt==0)&&(ReadBCnt==0)),
+                "NO READ NO WRITE"
+                );
+    EAPI_LIB_PREVENT_BUF_OVERFLOW(
+                EApiI2CWriteReadRawSpecific,
+                ReadBCnt,
+                RBufLen+1
+                );
+    ErrorCode2=EApiI2CWriteReadEmul(
+                Id,
+                Addr,
+                pWBuffer,
+                WriteBCnt,
+                CmdBCnt,
+                pRBuffer,
+                ReadBCnt
+                );
+
+    if(ErrorCode2!=EAPI_STATUS_SUCCESS)
+        StatusCode=ErrorCode2;
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
+}
+
+EApiStatus_t
+EAPI_CALLTYPE
 EApiI2CWriteReadRaw(
         __IN     EApiId_t  Id       , /* I2C Bus Id */
         __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
@@ -113,7 +195,7 @@ EApiI2CWriteReadRaw(
     siFormattedMessage_M2(
                 'L'                   ,
                 __FILE__              ,
-                "EApiI2CWriteTransfer",
+                "EApiI2CWriteReadRaw",
                 __LINE__              ,
                 "Info"                ,
                 "ADDR=%02"PRIX8" WriteBCnt=%04"PRIX32
@@ -122,17 +204,17 @@ EApiI2CWriteReadRaw(
                 Addr, WriteBCnt, RBufLen, WriteBCnt, ReadBCnt
                 );
 #endif
-    /*  EAPI_LIB_ASSERT_PARAMATER_CHECK(
+      EAPI_LIB_ASSERT_PARAMATER_CHECK(
           EApiI2CWriteReadRaw,
           (ReadBCnt>1)&&(pRBuffer==NULL) ,
           "pRBuffer is NULL"
-          ); */
+          );
 
-    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-                EApiI2CWriteReadRaw,
-                (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
-                "pRBuffer is NULL"
-                );
+//    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+//                EApiI2CWriteReadRaw,
+//                (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
+//                "pRBuffer is NULL"
+//                );
     EAPI_LIB_ASSERT_PARAMATER_CHECK(
                 EApiI2CWriteReadRaw,
                 (ReadBCnt>1)&&(RBufLen==0) ,
@@ -143,14 +225,12 @@ EApiI2CWriteReadRaw(
                 ((WriteBCnt==0)&&(ReadBCnt==0)),
                 "NO READ NO WRITE"
                 );
-
     EAPI_LIB_PREVENT_BUF_OVERFLOW(
                 EApiI2CWriteReadRaw,
                 ReadBCnt,
                 RBufLen+1
                 );
-
-    ErrorCode2=EApiI2CWriteReadEmul(
+    ErrorCode2=EApiI2CWriteReadEmulUniversal(
                 Id,
                 Addr,
                 pWBuffer,
@@ -164,6 +244,7 @@ EApiI2CWriteReadRaw(
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
+
 
 EApiStatus_t 
 EAPI_CALLTYPE 
@@ -180,6 +261,7 @@ EApiI2CReadTransfer(
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     uint8_t LclpBuffer[8]={0};
+    uint32_t LclCmdBcnt = 0;
     int LclByteCnt=0;
 #if (STRICT_VALIDATION>1)
     uint32_t MaxBlkLen;
@@ -216,21 +298,32 @@ EApiI2CReadTransfer(
 
     if(EAPI_I2C_IS_10BIT_ADDR(Addr))
     {
-        LclpBuffer[LclByteCnt++]=(uint8_t)(Addr&0xFF);
-        Addr>>=8;
+        EAPI_LIB_RETURN_ERROR(
+                    EApiI2CReadTransfer,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "10Bit Address is not supported"
+                    );
+
+       /* LclpBuffer[LclByteCnt++]=(uint8_t)(Addr&0xFF);
+        Addr>>=8;*/
     }
 
     if(!EAPI_I2C_IS_NO_CMD(Cmd)){
         if(EAPI_I2C_IS_EXT_CMD(Cmd))
+        {
             LclpBuffer[LclByteCnt++]=(uint8_t)((Cmd>>8)&0xFF);
+            LclCmdBcnt++;
+        }
 
         LclpBuffer[LclByteCnt++]=(uint8_t)(Cmd&0xFF);
+        LclCmdBcnt++;
     }
-    StatusCode=EApiI2CWriteReadRaw(
+    StatusCode=EApiI2CWriteReadRawSpecific(
                 Id,
                 (uint8_t)Addr,
                 LclpBuffer,
                 LclByteCnt+1,
+                LclCmdBcnt,
                 pBuffer,
                 BufLen,
                 ByteCnt+1
@@ -256,6 +349,7 @@ EApiI2CWriteTransfer(
     uint8_t * pLclBuffer;
     uint32_t LclByteCnt=0;
     uint32_t MaxBlkLen;
+    uint32_t LclCmdBcnt = 0;
 
     EAPI_CHECK_INITIALIZED(EApiI2CWriteTransfer);
 
@@ -276,24 +370,33 @@ EApiI2CWriteTransfer(
 
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiI2CWriteTransfer, ByteCnt);
 
-    pLclBuffer=(uint8_t *)malloc(ByteCnt+3);
+    if(EAPI_I2C_IS_10BIT_ADDR(Addr))
+    {
+        EAPI_LIB_RETURN_ERROR(
+                    EApiI2CWriteTransfer,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "10Bit Address is not supported"
+                    );
+   /*     *pLclBuffer=(uint8_t)Addr&0xFF;
+        Addr>>=8;
+        LclByteCnt++;*/
+    }
+
+    pLclBuffer=(uint8_t *)malloc(ByteCnt+2);
     EAPI_LIB_RETURN_ERROR_IF(
                 EApiI2CWriteTransfer,
                 (pLclBuffer==NULL),
                 EAPI_STATUS_ALLOC_ERROR,
                 "Error Allocating Memory"
                 );
-    if(EAPI_I2C_IS_10BIT_ADDR(Addr))
-    {
-        *pLclBuffer=(uint8_t)Addr&0xFF;
-        Addr>>=8;
-        LclByteCnt++;
-    }
+
     if(!EAPI_I2C_IS_NO_CMD(Cmd)){
         if(EAPI_I2C_IS_EXT_CMD(Cmd)){
             pLclBuffer[LclByteCnt++]=(uint8_t)((Cmd>>8)&UINT8_MAX);
+            LclCmdBcnt++;
         }
         pLclBuffer[LclByteCnt++]=(uint8_t)((Cmd)&UINT8_MAX);
+        LclCmdBcnt++;
     }
 
 #if (STRICT_VALIDATION>1)
@@ -325,24 +428,16 @@ EApiI2CWriteTransfer(
             );
 #endif
 
-    /*  StatusCode=EApiI2CWriteReadRaw(
+      StatusCode=EApiI2CWriteReadRawSpecific(
           Id,
           (uint8_t)Addr,
           pLclBuffer,
           LclByteCnt+ByteCnt+1,
+          LclCmdBcnt,
           NULL,
           0,
           0
-          ); */
-    StatusCode=EApiI2CWriteReadRaw(
-                Id,
-                (uint8_t)Addr,
-                pLclBuffer,
-                LclByteCnt+ByteCnt+1,
-                NULL,
-                LclByteCnt,
-                LclByteCnt
-                );
+          );
 
     if(LclByteCnt)
         free(pLclBuffer);

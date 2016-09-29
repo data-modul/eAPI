@@ -784,6 +784,26 @@ EApiI2CWriteReadRaw(
                                            */
         );
 
+EApiStatus_t
+EAPI_CALLTYPE
+EApiI2CWriteReadRawSpecific(
+        __IN     EApiId_t  Id       , /* I2C Bus Id */
+        __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
+                                           * Device Address
+                                           */
+        __INOPT  uint8_t     *pWBuffer , /* Write Data pBuffer */
+        __IN     uint32_t  WriteBCnt, /* Number of Bytes to
+                                           * write plus 1
+                                           */
+        __IN     uint32_t  CmdBCnt, /* Number of Cmd Bytes to write */
+        __OUTOPT uint8_t     *pRBuffer , /* Read Data pBuffer */
+        __IN     uint32_t  RBufLen  , /* Data pBuffer Length */
+        __IN     uint32_t  ReadBCnt   /* Number of Bytes to
+                                           * Read plus 1
+                                           */
+);
+
+
 #define EApiI2CWriteRaw(Id, Addr, pBuffer, ByteCnt)         \
     EApiI2CWriteReadRaw(Id, Addr, pBuffer, ByteCnt, NULL, 0, 0)
 #define EApiI2CReadRaw(Id, Addr, pBuffer, BufLen, ByteCnt) \

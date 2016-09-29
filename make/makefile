@@ -89,7 +89,7 @@ StaticLibFName:=$(LibName).a
 DBGOPT:=-g
 RELOPT:=-O3
 INCLUDS=-I../include/linux -I../lib/include -I../include
-CFLAGS:=$(CFLAGS) -Wall -W -pedantic $(INCLUDS)
+CFLAGS:=$(CFLAGS) -Wall -W  $(INCLUDS)
 ifneq ($(OS), Windows_NT)
 ifndef INTERPRETER
 INTERPRETER:=$(shell readelf -l $(shell which ld)|grep "\[.*:.*\]"| sed -nr "s/\s*\[.*:\s+(.*)\]/\1/p")

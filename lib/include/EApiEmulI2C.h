@@ -57,10 +57,21 @@ EApiI2CWriteReadEmul(
 	__IN      uint8_t   Addr,
     __INOPT   uint8_t     *pWpBuffer,
 	__IN      uint32_t  WriteBCnt,
+     __IN     uint32_t  CmdBCnt,
     __OUTOPT  uint8_t     *pRpBuffer,
 	__IN      uint32_t  ReadBCnt
 	);
 
+uint32_t
+EAPI_CALLTYPE
+EApiI2CWriteReadEmulUniversal(
+    __IN      uint32_t  Id,
+    __IN      uint8_t   Addr,
+    __INOPT   uint8_t     *pWpBuffer,
+    __IN      uint32_t  WriteBCnt,
+    __OUTOPT  uint8_t     *pRpBuffer,
+    __IN      uint32_t  ReadBCnt
+    );
 
 #ifdef __cplusplus
 }
