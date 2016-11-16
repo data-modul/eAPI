@@ -78,6 +78,7 @@ StorageAreaMapping_t StorageAreaTbl[]={
   },
 };
 
+
 EApiStatus_t 
 EApiStorageCapEmul (
     __IN      EApiId_t  Id          , 
@@ -102,6 +103,12 @@ EApiStorageCapEmul (
         EAPI_LIB_RETURN_SUCCESS(EApiStorageCap, "");
       }
   }
+
+
+
+
+
+
   EAPI_LIB_RETURN_ERROR(
     EApiStorageCapEmul        ,
     EAPI_STATUS_UNSUPPORTED   ,

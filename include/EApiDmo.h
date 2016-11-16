@@ -19,8 +19,42 @@
 #define HWMON_NAME "nct7802"
 
 extern uint8_t *eepromBuffer;
+
 extern int board_type;
+
 extern char *hwname;
+
 extern char err[256];
+
+extern struct gpiohandle_request *req;
+extern char *gpioName;
+extern unsigned int gpioLines;
+extern     int gpiofd;
+
+
+
+/*
+ *
+ *      B A C K L I G H T
+ *
+ */
+/* IDS */
+#define EAPI_DMO_ID_BACKLIGHT_1              EAPI_ID_BACKLIGHT_1
+
+/*
+ *
+ *      G P I O
+ *
+ */
+/* IDs */
+#define EAPI_DMO_ID_GPIO_BANK    EAPI_ID_GPIO_BANK00
+#define EAPI_DMO_ID_GPIO_GPI0    EAPI_GPIO_GPIO_ID(0)
+#define EAPI_DMO_ID_GPIO_GPI1    EAPI_GPIO_GPIO_ID(1)
+#define EAPI_DMO_ID_GPIO_GPI2    EAPI_GPIO_GPIO_ID(2)
+#define EAPI_DMO_ID_GPIO_GPI3    EAPI_GPIO_GPIO_ID(3)
+#define EAPI_DMO_ID_GPIO_GPO0    EAPI_GPIO_GPIO_ID(4)
+#define EAPI_DMO_ID_GPIO_GPO1    EAPI_GPIO_GPIO_ID(5)
+#define EAPI_DMO_ID_GPIO_GPO2    EAPI_GPIO_GPIO_ID(6)
+#define EAPI_DMO_ID_GPIO_GPO3    EAPI_GPIO_GPIO_ID(7)
 
 #endif /* EAPIDMO_H */

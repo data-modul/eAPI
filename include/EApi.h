@@ -1270,6 +1270,10 @@ EApiWDogStop(void);
 #define EAPI_ID_GPIO_GPIO01     EAPI_GPIO_GPIO_ID(1) /* (Optional) */
 #define EAPI_ID_GPIO_GPIO02     EAPI_GPIO_GPIO_ID(2) /* (Optional) */
 #define EAPI_ID_GPIO_GPIO03     EAPI_GPIO_GPIO_ID(3) /* (Optional) */
+#define EAPI_ID_GPIO_GPIO04     EAPI_GPIO_GPIO_ID(4) /* (Optional) */
+#define EAPI_ID_GPIO_GPIO05     EAPI_GPIO_GPIO_ID(5) /* (Optional) */
+#define EAPI_ID_GPIO_GPIO06     EAPI_GPIO_GPIO_ID(6) /* (Optional) */
+#define EAPI_ID_GPIO_GPIO07     EAPI_GPIO_GPIO_ID(7) /* (Optional) */
 
 /*
  * Multiple GPIOs Per ID Mapping

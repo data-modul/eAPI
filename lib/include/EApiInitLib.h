@@ -61,6 +61,9 @@ EApiUninitLib();
 EApiStatus_t find_hwmon(char **result);
 EApiStatus_t read_eeprom(int eeprom_bus,char **pBuf);
 EApiStatus_t fill_eepromBuffer(uint8_t **result);
+EApiStatus_t list_gpio_device();
+EApiStatus_t gpio_dev_open(const char *device_name);
+
 
 #ifndef EAPI_LIB_MSG_OUT
 #  if 0

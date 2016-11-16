@@ -40,12 +40,56 @@
 #include <limits.h>
 #include <dirent.h>
 #include <errno.h>
+#include <linux/gpio.h>
 
 FILE *OutputStream=NULL;
 uint8_t *eepromBuffer;
 int board_type;
 char *hwname;
 char err[256];
+
+struct gpiohandle_request *req;
+char *gpioName;
+unsigned int gpioLines;
+int gpiofd  = -1;
+
+
+
+struct gpio_flag {
+    char *name;
+    unsigned long mask;
+};
+
+struct gpio_flag flagnames[] = {
+{
+    .name = "kernel",
+    .mask = GPIOLINE_FLAG_KERNEL,
+},
+{
+    .name = "output",
+    .mask = GPIOLINE_FLAG_IS_OUT,
+},
+{
+    .name = "active-low",
+    .mask = GPIOLINE_FLAG_ACTIVE_LOW,
+},
+{
+    .name = "open-drain",
+    .mask = GPIOLINE_FLAG_OPEN_DRAIN,
+},
+{
+    .name = "open-source",
+    .mask = GPIOLINE_FLAG_OPEN_SOURCE,
+},
+};
+
+
+
+
+
+
+
+
 
 void __cdecl DebugMsg(__IN const char *const fmt, ...)
 {
@@ -167,7 +211,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t **result)
             snprintf(err,sizeof(err),"Error in Eeprom Allocating Memory\n");
             printf("%s",err);
             EAPI_LIB_RETURN_ERROR(
-                        EApiInitLib,
+                        fill_eepromBuffer,
                         EAPI_STATUS_ALLOC_ERROR,
                         err);
         }
@@ -187,7 +231,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t **result)
             snprintf(err,sizeof(err),"Unrecognised Eeprom Address: %s\n ",strerror(errno));
             printf("%s",err);
             EAPI_LIB_RETURN_ERROR(
-                        EApiInitLib,
+                        fill_eepromBuffer,
                         EAPI_STATUS_NOT_FOUND,
                         err);
         }
@@ -197,7 +241,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t **result)
             snprintf(err,sizeof(err),"Cannot set Eeprom slave ddress: %s\n",strerror(errno));
             printf("%s",err);
             EAPI_LIB_RETURN_ERROR(
-                        EApiInitLib,
+                        fill_eepromBuffer,
                         EAPI_STATUS_NOT_FOUND,
                         err);
         }
@@ -209,7 +253,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t **result)
                 snprintf(err,sizeof(err),"Cannot write into Eeprom: %s\n",strerror(errno));
                 printf("%s",err);
                 EAPI_LIB_RETURN_ERROR(
-                            EApiInitLib,
+                            fill_eepromBuffer,
                             EAPI_STATUS_WRITE_ERROR,
                             err);
             }
@@ -221,7 +265,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t **result)
                     snprintf(err,sizeof(err),"Cannot read from Eeprom: %s\n",strerror(errno));
                     printf("%s",err);
                     EAPI_LIB_RETURN_ERROR(
-                                EApiInitLib,
+                                fill_eepromBuffer,
                                 EAPI_STATUS_READ_ERROR,
                                 err);
                 }
@@ -249,13 +293,159 @@ EApiStatus_t fill_eepromBuffer(uint8_t **result)
     else
     {
         EAPI_LIB_RETURN_ERROR(
-                    EApiInitLib,
+                    fill_eepromBuffer,
                     EAPI_STATUS_ERROR,
                     "No Eeprom Bus is found");
     }
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 
+}
+
+EApiStatus_t list_gpio_device()
+{
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+    struct dirent *de;
+    DIR *dir;
+    struct gpiochip_info cinfo;
+    char chrdev_name[NAME_MAX];
+    int fd;
+    int ret;
+
+    gpioName = NULL;
+    gpioLines = 0;
+
+    if(!(dir = opendir("/dev/")))
+    {
+        snprintf(err,sizeof(err),"Failed to open /dev: %s",strerror(errno));
+        EAPI_LIB_RETURN_ERROR(
+                    list_gpio_device,
+                    EAPI_STATUS_UNSUPPORTED,
+                    err);
+    }
+
+    /* go through the gpio devices */
+    while ((de = readdir(dir)) != NULL) {
+        if (strstr(de->d_name, "gpiochip") != NULL)
+        {
+            sprintf(chrdev_name, "/dev/%s", de->d_name);
+            fd = open(chrdev_name, 0);
+            if (fd == -1) {
+                snprintf(err,sizeof(err),"Failed to open %s: %s",chrdev_name,strerror(errno));
+                EAPI_FORMATED_MES('E',
+                                  list_gpio_device,
+                                  EAPI_STATUS_UNSUPPORTED,
+                                  err
+                                  );
+                continue;
+            }
+
+            /* Inspect this GPIO chip */
+            ret = ioctl(fd, GPIO_GET_CHIPINFO_IOCTL, &cinfo);
+            if (ret == -1) {
+                snprintf(err,sizeof(err),"Failed to issue CHIPINFO IOCTL: %s",strerror(errno));
+                EAPI_FORMATED_MES('E',
+                                  list_gpio_device,
+                                  EAPI_STATUS_UNSUPPORTED,
+                                  err
+                                  );
+            }
+            else
+            {
+                if (!strncmp(cinfo.label, "dmec-gpio.1", sizeof("dmec-gpio.1"))) /* dmec gpio found */
+                {
+                    gpioName = (char*)malloc(sizeof(cinfo.name)*sizeof(char));
+                    strncpy(gpioName, cinfo.name,sizeof(cinfo.name));
+                    gpioLines = cinfo.lines;
+                    printf("%s  %d\n",gpioName, gpioLines);
+                    close(fd);
+                    break;
+                }
+            }
+            close(fd);
+        }
+        else
+            continue;
+    }
+    closedir(dir);
+
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
+}
+
+EApiStatus_t gpio_dev_open(const char *device_name)
+{
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+    char chrdev_name[NAME_MAX];
+    int ret;
+    unsigned int i;
+
+    snprintf(chrdev_name, sizeof("/dev/")+sizeof(device_name)+1,"/dev/%s",device_name);
+    gpiofd = open(chrdev_name, O_WRONLY);
+    if(gpiofd < 0)
+    {
+        snprintf(err,sizeof(err),"Failed to open gpio device: %s",strerror(errno));
+        EAPI_LIB_RETURN_ERROR(
+                    gpio_dev_open,
+                    EAPI_STATUS_UNSUPPORTED,
+                    err);
+    }
+
+    req = (struct gpiohandle_request*) malloc(sizeof(struct gpiohandle_request)*gpioLines);
+    if(req == NULL)
+    {
+        snprintf(err,sizeof(err),"Failed to malloc memory for gpio request handler.");
+        EAPI_LIB_RETURN_ERROR(
+                    gpio_dev_open,
+                    EAPI_STATUS_UNSUPPORTED,
+                    err);
+    }
+
+    for (i =0; i < gpioLines; i++)
+    {
+        struct gpioline_info linfo;
+
+        req[i].lineoffsets[0] = i;
+        req[i].lines = 1;
+
+        memset(&linfo, 0, sizeof(linfo));
+        linfo.line_offset = i;
+        ret = ioctl(gpiofd, GPIO_GET_LINEINFO_IOCTL, &linfo);
+        if (ret == -1)
+        {
+            snprintf(err,sizeof(err),"Failed to issue lineinfo ioctl: %s",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        gpio_dev_open,
+                        EAPI_STATUS_UNSUPPORTED,
+                        err);
+        }
+        else
+        {
+            if((linfo.flags & GPIOLINE_FLAG_IS_OUT) == GPIOLINE_FLAG_IS_OUT)
+            {
+                printf("direction %d:output\n",i);
+                req[i].flags = GPIOHANDLE_REQUEST_OUTPUT;
+            }
+            else
+            {
+                printf("direction %d:input\n",i);
+                req[i].flags = GPIOHANDLE_REQUEST_INPUT;
+            }
+        }
+
+        ret = ioctl(gpiofd, GPIO_GET_LINEHANDLE_IOCTL, &req[i]);
+        if(ret == -1)
+        {
+            snprintf(err,sizeof(err),"Failed to issue GET LINEHANDLE IOCTL for pin %d: %s",i,strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        gpio_dev_open,
+                        EAPI_STATUS_ERROR,
+                        err);
+        }
+    }
+
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
 }
 
 EApiStatus_t 
@@ -280,12 +470,24 @@ EApiInitLib(){
              LIB_VERSION, LIB_REVISION, LIB_BUILD
              );
     /* ******************** EEPROM ************************** */
-   eepromBuffer = NULL;
-   fill_eepromBuffer(&eepromBuffer);
+    eepromBuffer = NULL;
+    fill_eepromBuffer(&eepromBuffer);
 
     /* ******************** HWMON ************************** */
     hwname = NULL;
     find_hwmon(&hwname);
+
+    /* ******************** GPIO ************************** */
+    gpioName = NULL;
+    list_gpio_device();
+    if(gpioName != NULL && gpioLines > 0)
+        gpio_dev_open(gpioName);
+    else
+        EAPI_FORMATED_MES('E',
+                          EApiInitLib,
+                          EAPI_STATUS_UNSUPPORTED,
+                          "No GPIO chip found"
+                          );
 
     return EAPI_STATUS_SUCCESS;
 }
@@ -298,15 +500,27 @@ EApiUninitLib(){
              "# Exit \n"
              "#\n"
              );
+    unsigned i =0;
 
     if (eepromBuffer != NULL)
         free(eepromBuffer);
-
 
     if(OutputStream!=NULL){
         fclose(OutputStream);
         OutputStream=NULL;
     }
+
+    if(gpioName != NULL)
+        free(gpioName);
+    if(req != NULL)
+    {
+        for (i = 0; i< gpioLines; i++)
+            close(req[i].fd);
+        free(req);
+    }
+    if(gpiofd >= 0)
+        close(gpiofd);
+
     return EAPI_STATUS_SUCCESS;
 }
 

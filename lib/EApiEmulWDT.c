@@ -35,7 +35,14 @@
  */
 
 #include <EApiLib.h>
-
+#include <dirent.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <stdlib.h>
+#include <fcntl.h>
+ #include <errno.h>
+#include <sys/ioctl.h>
+#include <linux/watchdog.h>
 
 /*
  *
@@ -49,12 +56,101 @@
 #define WATCHDOG_ENABLED  ((unsigned)-1)
 #define WATCHDOG_DISABLED ((unsigned)0)
 static unsigned WatchdogState=WATCHDOG_DISABLED;
-
+static unsigned WatchdogFound = 0;
+char *watchdogName= NULL;
+static int wdogDescriptor = 0;
 
 #define MIN_IN_millisec(x) ((x)*60*1000)
 #define MaxDelay        MIN_IN_millisec(10)
 #define MaxEventTimeout MIN_IN_millisec(10)
 #define MaxResetTimeout MIN_IN_millisec(10)
+
+static void find_wdog_device()
+{
+    FILE *f;
+    char fstype[NAME_MAX], sysfs[NAME_MAX], n[NAME_MAX];
+    int foundsysfs = 0;
+    struct dirent *de;
+    DIR *dir;
+    struct stat sb;
+    char *linkname;
+    ssize_t r, bufsiz;
+
+    if (WatchdogFound == 1)
+        return;
+
+    watchdogName = NULL;
+    /* look in sysfs */
+    /* First figure out where sysfs was mounted */
+    if ((f = fopen("/proc/mounts", "r")) == NULL)
+        return;
+
+    while (fgets(n, NAME_MAX, f)) {
+        sscanf(n, "%*[^ ] %[^ ] %[^ ] %*s\n", sysfs, fstype);
+        if (strcasecmp(fstype, "sysfs") == 0) {
+            foundsysfs++;
+            break;
+        }
+    }
+    fclose(f);
+    if (! foundsysfs)
+        return;
+
+    strcat(sysfs, "/class/watchdog");
+    if(!(dir = opendir(sysfs)))
+        return;
+
+    /* go through the watchdogs */
+    while ((de = readdir(dir)) != NULL) {
+        if (!strcmp(de->d_name, "."))
+            continue;
+        if (!strcmp(de->d_name, ".."))
+            continue;
+
+        /* this should work for kernels 2.6.5 or higher and */
+        /* is preferred because is unambiguous */
+        sprintf(n, "%s/%s", sysfs, de->d_name);
+
+        if (lstat(n, &sb) == -1)
+        {
+            perror("lstat");
+            return;
+        }
+
+        if(sb.st_size == 0)
+            bufsiz = PATH_MAX;
+        else
+            bufsiz = sb.st_size + 1;
+
+        linkname = malloc(bufsiz);
+        if(linkname == NULL)
+        {
+            perror("malloc");
+            return;
+        }
+        r = readlink(n, linkname, bufsiz);
+        if (r == -1)
+        {
+            perror("readlink");
+            return;
+        }
+        linkname[r]= '\0';
+
+        if (strstr(linkname, "dmec-wdt") != NULL)
+        {
+            WatchdogFound = 1;
+            watchdogName = malloc(sizeof(de->d_name)+1);
+            strcpy(watchdogName, de->d_name);
+            free(linkname);
+            break;
+        }
+
+        free(linkname);
+    }
+    closedir(dir);
+    return;
+}
+
 EApiStatus_t 
 EAPI_CALLTYPE
 EApiWDogGetCapEmul(
@@ -73,9 +169,23 @@ EApiWDogGetCapEmul(
     )
 {
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-  *pMaxDelay        =MaxDelay;
-  *pMaxEventTimeout =MaxEventTimeout;
-  *pMaxResetTimeout =MaxResetTimeout;
+
+  find_wdog_device();
+  if (WatchdogFound == 0) // no WDG
+  {
+      EAPI_LIB_RETURN_ERROR(
+                  EApiWDogGetCapEmul,
+                  EAPI_STATUS_UNSUPPORTED,
+                  "No Watchdog found");
+  }
+
+  if(pMaxDelay)
+      *pMaxDelay = MaxDelay;
+  if (pMaxEventTimeout)
+      *pMaxEventTimeout =MaxEventTimeout;
+  if(pMaxResetTimeout)
+      *pMaxResetTimeout =MaxResetTimeout;
+
   EAPI_LIB_RETURN_SUCCESS(EApiWDogGetCapEmul, "");
 
 EAPI_LIB_ASSERT_EXIT
@@ -94,11 +204,14 @@ EApiWDogStartEmul(
     )
 {
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+  char devname[20];
+  int ret;
+
   EAPI_LIB_RETURN_ERROR_IF(
       EApiWDogStartEmul,
       (WatchdogState==WATCHDOG_ENABLED),
       EAPI_STATUS_RUNNING,
-      "Watchdog alread runing, need to stop before starting"
+      "Watchdog already runing, need to stop before starting"
       );
   EAPI_LIB_ASSERT_PARAMATER_CHECK(
     EApiWDogStartEmul,
@@ -115,22 +228,135 @@ EApiWDogStartEmul(
     (ResetTimeout>MaxResetTimeout),
    "(ResetTimeout>pMaxResetTimeout)"
   );
+
+  find_wdog_device();
+  if (WatchdogFound == 0) // no WDG
+  {
+      EAPI_LIB_RETURN_ERROR(
+                  EApiWDogStartEmul,
+                  EAPI_STATUS_ERROR,
+                  "No Watchdog found");
+  }
+
+  /* open watchdog device */
+  snprintf(devname,sizeof(devname),"/dev/%s",watchdogName);
+  devname[sizeof(devname) - 1] = '\0';
+  free(watchdogName);
+  wdogDescriptor = open(devname,O_WRONLY);
+  if(wdogDescriptor < 0)
+  {
+      snprintf(err,sizeof(err),"Unsupported watchdog device %s: %s\n ",devname,strerror(errno));
+      EAPI_LIB_RETURN_ERROR(
+                  EApiWDogStartEmul,
+                  EAPI_STATUS_ERROR,
+                 err);
+  }
+
+  /* set delay*/
+  EAPI_FORMATED_MES('L',
+      EApiWDogStartEmul,
+      EAPI_STATUS_UNSUPPORTED,
+      "Delay time is not supported by the driver."
+      );
+
+  /* set EventTimeOut */
+  uint32_t SavedEventTimeoutSec = EventTimeout / 1000;
+  uint32_t EventTimeoutSec = SavedEventTimeoutSec;
+  ret = ioctl(wdogDescriptor, WDIOC_SETPRETIMEOUT, &EventTimeoutSec);
+  if(ret)
+  {
+      snprintf(err,sizeof(err),"Setting EventTimeout failed.\n ");
+      EAPI_FORMATED_MES('E',
+          EApiWDogStartEmul,
+          EAPI_STATUS_UNSUPPORTED,
+          err
+          );
+  }
+  /* read back EventTimeout*/
+  ret = ioctl(wdogDescriptor, WDIOC_GETPRETIMEOUT, &EventTimeoutSec);
+  if(ret)
+  {
+      snprintf(err,sizeof(err),"Getting EventTimeout failed.\n ");
+      EAPI_FORMATED_MES('E',
+          EApiWDogStartEmul,
+          EAPI_STATUS_UNSUPPORTED,
+          err
+          );
+  }
+  EAPI_LIB_ASSERT_PARAMATER_CHECK(
+    EApiWDogStartEmul,
+    (EventTimeoutSec != SavedEventTimeoutSec),
+   "Requested EventTimeoutSec cannot be set. Set to MaxEventTimeout"
+  );
+
+
+  /* set ResetTimeOut */
+  uint32_t SavedResetTimeoutSec = ResetTimeout / 1000;
+  uint32_t ResetTimeoutSec = SavedResetTimeoutSec;
+  ret = ioctl(wdogDescriptor, WDIOC_SETTIMEOUT, &ResetTimeoutSec);
+  if(ret)
+  {
+      snprintf(err,sizeof(err),"Setting ResetTimeout failed.\n ");
+      EAPI_FORMATED_MES('E',
+          EApiWDogStartEmul,
+          EAPI_STATUS_UNSUPPORTED,
+          err
+          );
+  }
+  /* read back ResetTimeout*/
+  ret = ioctl(wdogDescriptor, WDIOC_GETTIMEOUT, &ResetTimeoutSec);
+  if(ret)
+  {
+      snprintf(err,sizeof(err),"Getting ResetTimeoutSec failed.\n ");
+      EAPI_FORMATED_MES('E',
+          EApiWDogStartEmul,
+          EAPI_STATUS_UNSUPPORTED,
+          err
+          );
+  }
+  EAPI_LIB_ASSERT_PARAMATER_CHECK(
+    EApiWDogStartEmul,
+    (ResetTimeoutSec != SavedResetTimeoutSec),
+   "Requested ResetTimeoutSec cannot be set. Set to MaxResetTimeoutSec"
+  );
+
   WatchdogState=WATCHDOG_ENABLED;
   EAPI_LIB_RETURN_SUCCESS(EApiWDogStartEmul, "");
-EAPI_LIB_ASSERT_EXIT
 
+EAPI_LIB_ASSERT_EXIT
   return StatusCode;
 }
+
 EApiStatus_t 
 EApiWDogTriggerEmul(void)
 {
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+  int dummy,ret;
+
+  if (WatchdogFound == 0) // no WDG
+  {
+      EAPI_LIB_RETURN_ERROR(
+                  EApiWDogTriggerEmul,
+                  EAPI_STATUS_UNSUPPORTED,
+                  "No Watchdog found");
+  }
+
   EAPI_LIB_RETURN_ERROR_IF(
       EApiWDogTriggerEmul,
       (WatchdogState==WATCHDOG_DISABLED),
       EAPI_STATUS_ERROR,
-      "Watchdog Disabled therefore not possible to trigger"
+      "Watchdog not started, therefore not possible to trigger"
       );
+
+  ret = ioctl(wdogDescriptor, WDIOC_KEEPALIVE, &dummy);
+  if (ret)
+  {
+      snprintf(err,sizeof(err),"Trigger Watchdog failed.\n ");
+      EAPI_LIB_RETURN_ERROR(
+                  EApiWDogTriggerEmul,
+                  EAPI_STATUS_UNSUPPORTED,
+                 err);
+  }
 
   EAPI_LIB_RETURN_SUCCESS(
       EApiWDogTriggerEmul,
@@ -144,7 +370,28 @@ EApiStatus_t
 EApiWDogStopEmul(void)
 {
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+  int ret;
+
+  if (WatchdogFound == 0) // no WDG
+  {
+      EAPI_LIB_RETURN_ERROR(
+                  EApiWDogStopEmul,
+                  EAPI_STATUS_UNSUPPORTED,
+                  "No Watchdog found");
+  }
+
+  ret = write(wdogDescriptor,"V", sizeof("V"));
+  if (ret <= 0)
+  {
+      snprintf(err,sizeof(err),"Stop Watchdog failed.\n ");
+      EAPI_LIB_RETURN_ERROR(
+                  EApiWDogStopEmul,
+                  EAPI_STATUS_UNSUPPORTED,
+                 err);
+  }
+
   WatchdogState=WATCHDOG_DISABLED;
+  close(wdogDescriptor);
   EAPI_LIB_RETURN_SUCCESS(
       EApiWDogStopEmul,
       ""

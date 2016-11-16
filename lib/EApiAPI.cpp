@@ -644,6 +644,7 @@ EApiGPIOGetLevel(
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EAPI_CHECK_INITIALIZED(EApiGPIOGetLevel);
+
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiGPIOGetLevel, Bitmask);
     EAPI_LIB_ASSERT_PARAMATER_NULL(EApiGPIOGetLevel, pLevel);
 
@@ -824,10 +825,12 @@ EApiWDogGetCap(
                 ((pMaxDelay==NULL)&&(pMaxEventTimeout==NULL)&&(pMaxResetTimeout==NULL)),
                 "((pMaxDelay==NULL)&&(pMaxEventTimeout==NULL)&&(pMaxResetTimeout==NULL))"
                 );
-
-    if(pMaxDelay       ==NULL) pMaxDelay       =&DummyData;
-    if(pMaxEventTimeout==NULL) pMaxEventTimeout=&DummyData;
-    if(pMaxResetTimeout==NULL) pMaxResetTimeout=&DummyData;
+    if(pMaxDelay == NULL)
+        pMaxDelay = &DummyData;
+    if(pMaxEventTimeout==NULL)
+        pMaxEventTimeout=&DummyData;
+    if(pMaxResetTimeout==NULL)
+        pMaxResetTimeout=&DummyData;
     StatusCode=EApiWDogGetCapEmul(pMaxDelay, pMaxEventTimeout, pMaxResetTimeout);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
@@ -846,8 +849,9 @@ EApiWDogStart(
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-    EAPI_CHECK_INITIALIZED(EApiWDogStart);
+   EAPI_CHECK_INITIALIZED(EApiWDogStart);
   StatusCode=EApiWDogStartEmul(Delay, EventTimeout, ResetTimeout);
+
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
