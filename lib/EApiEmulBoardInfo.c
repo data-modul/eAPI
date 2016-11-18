@@ -79,63 +79,11 @@ EApiBoardGetStringAEmul(
 
     BufLenSav=*pBufLen;
 
-    if (Id == EAPI_ID_BOARD_MANUFACTURER_STR)
-        info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_TYPE,MANUFACTURE_ASCII_IND);
 
-    else if (Id == EAPI_ID_BOARD_NAME_STR)
-        info = (char*)eeprom_analyze(eepromBuffer,PRODUCT_TYPE,PRODUCT_ASCII_IND);
-
-    else if (Id ==  EAPI_ID_BOARD_SERIAL_STR)
-        info = (char*)eeprom_analyze(eepromBuffer,SN_TYPE,SN_ASCII_IND);
-
-    else if ((Id ==  EAPI_ID_BOARD_HW_REVISION_STR) ||
-             ( Id == EAPI_ID_BOARD_REVISION_STR))
-        info = (char*)eeprom_analyze(eepromBuffer,VERSION_TYPE,VERSION_ASCII_IND);
-    else if (Id ==  EAPI_DMO_ID_BOARD_MANUFACTURING_DATE_STR)
+    if (Id ==  EAPI_DMO_ID_BOARD_MANUFACTURING_DATE_STR)
         info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_DATE_TYPE,MANUFACTURE_DATE_ASCII_IND);
     else if (Id ==  EAPI_DMO_ID_BOARD_ID_STR)
         info = (char*)eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
-
-
-    else if (Id == EAPI_ID_BOARD_BIOS_REVISION_STR)
-    {
-        info = (char *)calloc(NAME_MAX, sizeof(char));
-        if (!info)
-        {
-            EAPI_LIB_RETURN_ERROR(
-                        EApiBoardGetStringAEmul,
-                        EAPI_STATUS_ALLOC_ERROR,
-                        "Error in Allocating Memory");
-        }
-        strncpy(path, BOARDINFO_PATH"bios_version", sizeof(BOARDINFO_PATH"bios_version"));
-        f = fopen(path, "r");
-        if (f != NULL)
-        {
-            char* res = fgets(line, sizeof(line), f);
-
-            if (res == NULL)
-            {
-                snprintf(err,sizeof(err),"Error during read operation: %s\n ",strerror(errno));
-                EAPI_LIB_RETURN_ERROR(
-                            EApiBoardGetStringAEmul,
-                            EAPI_STATUS_ERROR  ,
-                            err
-                            );
-            }
-            p=strrchr(line, '\n');/* search last space */
-            *p = '\0';/* split at last space */
-            strcpy(info, line);
-            fclose(f);
-        }
-        else
-        {
-            snprintf(err,sizeof(err),"Error in open file operation: %s\n ",strerror(errno));
-            EAPI_LIB_RETURN_ERROR(
-                        EApiBoardGetStringAEmul,
-                        EAPI_STATUS_ERROR  ,
-                        err);
-        }
-    }
     else if (Id == EAPI_ID_BOARD_PLATFORM_TYPE_STR)
     {
         info = (char *)calloc(NAME_MAX, sizeof(char));
@@ -159,11 +107,62 @@ EApiBoardGetStringAEmul(
 #endif
     }
     else
-        EAPI_LIB_RETURN_ERROR(
-                    EApiBoardGetStringAEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Unrecognised String ID"
-                    );
+    {
+
+        if (Id == EAPI_ID_BOARD_MANUFACTURER_STR)
+            strncpy(path, BOARDINFO_PATH"board_vendor", sizeof(BOARDINFO_PATH"board_vendor"));
+        else if (Id == EAPI_ID_BOARD_NAME_STR)
+            strncpy(path, BOARDINFO_PATH"board_name", sizeof(BOARDINFO_PATH"board_name"));
+        else if (Id ==  EAPI_ID_BOARD_SERIAL_STR)
+            strncpy(path, BOARDINFO_PATH"board_serial", sizeof(BOARDINFO_PATH"board_serial"));
+        else if ((Id ==  EAPI_ID_BOARD_HW_REVISION_STR) ||
+                 ( Id == EAPI_ID_BOARD_REVISION_STR))
+            strncpy(path, BOARDINFO_PATH"board_version", sizeof(BOARDINFO_PATH"board_version"));
+        else if (Id == EAPI_ID_BOARD_BIOS_REVISION_STR)
+            strncpy(path, BOARDINFO_PATH"bios_version", sizeof(BOARDINFO_PATH"bios_version"));
+        else
+            EAPI_LIB_RETURN_ERROR(
+                        EApiBoardGetStringAEmul,
+                        EAPI_STATUS_UNSUPPORTED  ,
+                        "Unrecognised String ID"
+                        );
+
+
+        info = (char *)calloc(NAME_MAX, sizeof(char));
+        if (!info)
+        {
+            EAPI_LIB_RETURN_ERROR(
+                        EApiBoardGetStringAEmul,
+                        EAPI_STATUS_ALLOC_ERROR,
+                        "Error in Allocating Memory");
+        }
+        f = fopen(path, "r");
+        if (f != NULL)
+        {
+            char* res = fgets(line, sizeof(line), f);
+            fclose(f);
+            if (res == NULL)
+            {
+                snprintf(err,sizeof(err),"Error during read operation: %s\n ",strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiBoardGetStringAEmul,
+                            EAPI_STATUS_ERROR  ,
+                            err
+                            );
+            }
+            p=strrchr(line, '\n');/* search last space */
+            *p = '\0';/* split at last space */
+            strcpy(info, line);
+        }
+        else
+        {
+            snprintf(err,sizeof(err),"Error in open file operation: %s\n ",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        EApiBoardGetStringAEmul,
+                        EAPI_STATUS_ERROR  ,
+                        err);
+        }
+    }
     /*
          * Basically equivilant to
          * strncpy(pBuffer, info, *pBufLen);
@@ -204,10 +203,10 @@ EApiBoardGetStringAEmul(
                 );
 
     EAPI_LIB_ASSERT_EXIT
-           if(info){
-            free(info);
-	   }
-            return StatusCode;
+            if(info){
+        free(info);
+    }
+    return StatusCode;
 }
 
 /*
@@ -234,7 +233,7 @@ EApiBoardGetValueEmul(
     {
     case EAPI_ID_BOARD_BOOT_COUNTER_VAL:
         snprintf(path,sizeof(BOOT_COUNTER_PATH),BOOT_COUNTER_PATH);
-		break;
+        break;
     case EAPI_ID_BOARD_RUNNING_TIME_METER_VAL:
         snprintf(path,sizeof(RUNTIME_PATH),RUNTIME_PATH);
         break;
@@ -278,20 +277,11 @@ EApiBoardGetValueEmul(
                         );
         break;
     case EAPI_ID_HWMON_CHIPSET_TEMP:/* it is different for BBW6 and CBS6 */
-        EAPI_LIB_RETURN_ERROR_IF(
+        EAPI_LIB_RETURN_ERROR(
                     EApiBoardGetValueEmul,
-                    (hwname==NULL),
-                    EAPI_STATUS_ERROR,
-                    "Error finding HWMON"
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Not support chipset Temperature"
                     );
-        if (board_type == BBW6)
-            snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp1_input"),HWMON_PATH"%s/temp1_input",hwname);
-        else
-            EAPI_LIB_RETURN_ERROR(
-                        EApiBoardGetValueEmul,
-                        EAPI_STATUS_UNSUPPORTED  ,
-                        "Not support CPU Temperature"
-                        );
         break;
     case EAPI_ID_HWMON_SYSTEM_TEMP:
         EAPI_LIB_RETURN_ERROR_IF(
@@ -319,18 +309,18 @@ EApiBoardGetValueEmul(
                     );
     case EAPI_ID_HWMON_VOLTAGE_VCORE:
         *pValue=0xffffff;
-                EAPI_LIB_RETURN_ERROR(
-                            EApiBoardGetValueEmul,
-                            EAPI_STATUS_UNSUPPORTED  ,
-                            "Unsupported Value"
-                            );
+        EAPI_LIB_RETURN_ERROR(
+                    EApiBoardGetValueEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unsupported Value"
+                    );
     case EAPI_ID_HWMON_VOLTAGE_2V5:
         *pValue=0xffffff;
-                EAPI_LIB_RETURN_ERROR(
-                            EApiBoardGetValueEmul,
-                            EAPI_STATUS_UNSUPPORTED  ,
-                            "Unsupported Value"
-                            );
+        EAPI_LIB_RETURN_ERROR(
+                    EApiBoardGetValueEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unsupported Value"
+                    );
     case EAPI_ID_HWMON_VOLTAGE_3V3:
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
@@ -351,11 +341,11 @@ EApiBoardGetValueEmul(
         break;
     case EAPI_ID_HWMON_VOLTAGE_5V:
         *pValue=0xffffff;
-                EAPI_LIB_RETURN_ERROR(
-                            EApiBoardGetValueEmul,
-                            EAPI_STATUS_UNSUPPORTED  ,
-                            "Unsupported Value"
-                            );
+        EAPI_LIB_RETURN_ERROR(
+                    EApiBoardGetValueEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unsupported Value"
+                    );
     case EAPI_ID_HWMON_VOLTAGE_5VSB:
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
@@ -381,7 +371,6 @@ EApiBoardGetValueEmul(
                     "Unsupported Value ID"
                     );
     }
-
     f = fopen(path, "r");
     if (f != NULL)
     {

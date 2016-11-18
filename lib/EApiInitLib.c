@@ -49,7 +49,7 @@ char *hwname;
 char err[256];
 
 struct gpiohandle_request *req;
-char *gpioName;
+static char *gpioName;
 unsigned int gpioLines;
 int gpiofd  = -1;
 
@@ -83,14 +83,6 @@ struct gpio_flag flagnames[] = {
 },
 };
 
-
-
-
-
-
-
-
-
 void __cdecl DebugMsg(__IN const char *const fmt, ...)
 {
     va_list arg;
@@ -106,7 +98,7 @@ void __cdecl DebugMsg(__IN const char *const fmt, ...)
 }
 
 
-EApiStatus_t find_hwmon(char **result)
+EApiStatus_t find_hwmon()
 {
     char s[NAME_MAX];
     struct dirent *de;
@@ -120,7 +112,7 @@ EApiStatus_t find_hwmon(char **result)
 
     if(!(dir = opendir(sysfs)))
     {
-        *result = NULL;
+        hwname = NULL;
 
         snprintf(err,sizeof(err),"%s",strerror(errno));
         EAPI_LIB_RETURN_ERROR(
@@ -146,7 +138,7 @@ EApiStatus_t find_hwmon(char **result)
         }
         if(f == NULL)
         {
-            *result = NULL;
+            hwname = NULL;
             closedir(dir);
             snprintf(err,sizeof(err),"%s",strerror(errno));
             EAPI_LIB_RETURN_ERROR(
@@ -165,13 +157,21 @@ EApiStatus_t find_hwmon(char **result)
 
         if( (s != NULL) && (!strncmp(s, HWMON_NAME,sizeof(HWMON_NAME))))
         {
-            *result = de->d_name;
+            hwname = (char*)malloc(sizeof(de->d_name)*sizeof(char));
+            if (!hwname)
+            {
+                EAPI_LIB_RETURN_ERROR(
+                            find_hwmon,
+                            EAPI_STATUS_ALLOC_ERROR,
+                            "Error in Allocating Memory");
+            }
+            strncpy(hwname, de->d_name,sizeof(de->d_name));
             StatusCode = EAPI_STATUS_SUCCESS;
             break;
         }
         else
         {
-            *result = NULL;
+            hwname = NULL;
             StatusCode = EAPI_STATUS_UNSUPPORTED;
         }
 
@@ -195,7 +195,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t **result)
     int i2cDescriptor = 0;
     int res = 0;
     int iRead = 0;
-    uint8_t * pBoardType;
+    //   uint8_t * pBoardType;
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
 
     /* ******************** EEPROM ************************** */
@@ -278,17 +278,17 @@ EApiStatus_t fill_eepromBuffer(uint8_t **result)
             close(i2cDescriptor);
         }
         /* ********************************************** */
-        /* detect_board_type */
-        pBoardType = eeprom_analyze(*result,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
-        board_type = UNKNOWN;
-        if (pBoardType)
-        {
-            if(!strncmp((const char*)pBoardType,"BBW6",4))
-                board_type = BBW6;
-            else if(!strncmp((const char*)pBoardType,"CBS6",4))
-                board_type = CBS6;
-            free(pBoardType);
-        }
+        //        /* detect_board_type */
+        //        pBoardType = eeprom_analyze(*result,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
+        //        board_type = UNKNOWN;
+        //        if (pBoardType)
+        //        {
+        //            if(!strncmp((const char*)pBoardType,"BBW6",4))
+        //                board_type = BBW6;
+        //            else if(!strncmp((const char*)pBoardType,"CBS6",4))
+        //                board_type = CBS6;
+        //            free(pBoardType);
+        //        }
     }
     else
     {
@@ -377,8 +377,9 @@ EApiStatus_t gpio_dev_open(const char *device_name)
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     char chrdev_name[NAME_MAX];
-    int ret;
+    int ret = -1;
     unsigned int i;
+
 
     snprintf(chrdev_name, sizeof("/dev/")+sizeof(device_name)+1,"/dev/%s",device_name);
     gpiofd = open(chrdev_name, O_WRONLY);
@@ -390,7 +391,6 @@ EApiStatus_t gpio_dev_open(const char *device_name)
                     EAPI_STATUS_UNSUPPORTED,
                     err);
     }
-
     req = (struct gpiohandle_request*) malloc(sizeof(struct gpiohandle_request)*gpioLines);
     if(req == NULL)
     {
@@ -400,15 +400,16 @@ EApiStatus_t gpio_dev_open(const char *device_name)
                     EAPI_STATUS_UNSUPPORTED,
                     err);
     }
-
     for (i =0; i < gpioLines; i++)
     {
         struct gpioline_info linfo;
 
+        memset(&linfo, 0, sizeof(linfo));
+        memset(&req[i], 0, sizeof(req[i]));
+
         req[i].lineoffsets[0] = i;
         req[i].lines = 1;
 
-        memset(&linfo, 0, sizeof(linfo));
         linfo.line_offset = i;
         ret = ioctl(gpiofd, GPIO_GET_LINEINFO_IOCTL, &linfo);
         if (ret == -1)
@@ -422,19 +423,16 @@ EApiStatus_t gpio_dev_open(const char *device_name)
         else
         {
             if((linfo.flags & GPIOLINE_FLAG_IS_OUT) == GPIOLINE_FLAG_IS_OUT)
-            {
-                printf("direction %d:output\n",i);
+           {
                 req[i].flags = GPIOHANDLE_REQUEST_OUTPUT;
+                req[i].default_values[0] = 0;
             }
             else
-            {
-                printf("direction %d:input\n",i);
                 req[i].flags = GPIOHANDLE_REQUEST_INPUT;
-            }
         }
 
         ret = ioctl(gpiofd, GPIO_GET_LINEHANDLE_IOCTL, &req[i]);
-        if(ret == -1)
+        if(ret == -1 || req[i].fd <= 0)
         {
             snprintf(err,sizeof(err),"Failed to issue GET LINEHANDLE IOCTL for pin %d: %s",i,strerror(errno));
             EAPI_LIB_RETURN_ERROR(
@@ -452,6 +450,11 @@ EApiStatus_t
 EApiInitLib(){
 
     char* logpath = getenv("LOGPATH");
+    char path[NAME_MAX];
+    FILE *f = NULL;
+    char line[NAME_MAX];
+    char *p;
+
     if(logpath == NULL)
         OutputStream=NULL;
     else {
@@ -473,9 +476,43 @@ EApiInitLib(){
     eepromBuffer = NULL;
     fill_eepromBuffer(&eepromBuffer);
 
+    /* ******************** Detect_board_type ************************** */
+    strncpy(path, "/sys/class/dmi/id/board_name", sizeof("/sys/class/dmi/id/board_name"));
+    board_type = UNKNOWN;
+    f = fopen(path, "r");
+    if (f != NULL)
+    {
+        char* res = fgets(line, sizeof(line), f);
+        fclose(f);
+        if (res == NULL)
+        {
+            EAPI_FORMATED_MES('E',
+                              EApiInitLib,
+                              EAPI_STATUS_UNSUPPORTED,
+                              err
+                              );
+        }
+        else
+        {
+            if(!strncmp(line,"eDM-COMC-BS6",12))
+                board_type = CBS6;
+            else if(!strncmp(line,"eDM-COMB-BW6",12))
+                board_type = BBW6;
+        }
+    }
+    else
+    {
+        snprintf(err,sizeof(err),"Error in open file operation: %s\n ",strerror(errno));
+        EAPI_FORMATED_MES('E',
+                          EApiInitLib,
+                          EAPI_STATUS_UNSUPPORTED,
+                          err
+                          );
+    }
+
     /* ******************** HWMON ************************** */
     hwname = NULL;
-    find_hwmon(&hwname);
+    find_hwmon();
 
     /* ******************** GPIO ************************** */
     gpioName = NULL;
@@ -510,14 +547,20 @@ EApiUninitLib(){
         OutputStream=NULL;
     }
 
+    if(hwname != NULL)
+        free(hwname);
+
     if(gpioName != NULL)
         free(gpioName);
+
     if(req != NULL)
     {
         for (i = 0; i< gpioLines; i++)
-            close(req[i].fd);
+            if(req[i].fd > 0)
+                close(req[i].fd);
         free(req);
     }
+
     if(gpiofd >= 0)
         close(gpiofd);
 

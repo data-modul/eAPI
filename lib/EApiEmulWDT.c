@@ -61,9 +61,9 @@ char *watchdogName= NULL;
 static int wdogDescriptor = 0;
 
 #define MIN_IN_millisec(x) ((x)*60*1000)
-#define MaxDelay        MIN_IN_millisec(10)
-#define MaxEventTimeout MIN_IN_millisec(10)
-#define MaxResetTimeout MIN_IN_millisec(10)
+#define MaxDelay        MIN_IN_millisec(0)
+#define MaxEventTimeout MIN_IN_millisec(140)
+#define MaxResetTimeout MIN_IN_millisec(140)
 
 static void find_wdog_device()
 {
@@ -76,10 +76,11 @@ static void find_wdog_device()
     char *linkname;
     ssize_t r, bufsiz;
 
-    if (WatchdogFound == 1)
+    if (WatchdogFound == 1 && watchdogName != NULL)
         return;
 
     watchdogName = NULL;
+    WatchdogFound = 0;
     /* look in sysfs */
     /* First figure out where sysfs was mounted */
     if ((f = fopen("/proc/mounts", "r")) == NULL)
@@ -139,8 +140,8 @@ static void find_wdog_device()
         if (strstr(linkname, "dmec-wdt") != NULL)
         {
             WatchdogFound = 1;
-            watchdogName = malloc(sizeof(de->d_name)+1);
-            strcpy(watchdogName, de->d_name);
+            watchdogName = (char*)malloc((sizeof(de->d_name)+1)*sizeof(char));
+            strncpy(watchdogName, de->d_name,sizeof(de->d_name));
             free(linkname);
             break;
         }
@@ -178,6 +179,7 @@ EApiWDogGetCapEmul(
                   EAPI_STATUS_UNSUPPORTED,
                   "No Watchdog found");
   }
+  free(watchdogName);
 
   if(pMaxDelay)
       *pMaxDelay = MaxDelay;
@@ -204,8 +206,17 @@ EApiWDogStartEmul(
     )
 {
   EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-  char devname[20];
+  char devname[100];
   int ret;
+
+  find_wdog_device();
+  if (WatchdogFound == 0) // no WDG
+  {
+      EAPI_LIB_RETURN_ERROR(
+                  EApiWDogStartEmul,
+                  EAPI_STATUS_ERROR,
+                  "No Watchdog found");
+  }
 
   EAPI_LIB_RETURN_ERROR_IF(
       EApiWDogStartEmul,
@@ -229,19 +240,10 @@ EApiWDogStartEmul(
    "(ResetTimeout>pMaxResetTimeout)"
   );
 
-  find_wdog_device();
-  if (WatchdogFound == 0) // no WDG
-  {
-      EAPI_LIB_RETURN_ERROR(
-                  EApiWDogStartEmul,
-                  EAPI_STATUS_ERROR,
-                  "No Watchdog found");
-  }
-
-  /* open watchdog device */
+   /* open watchdog device */
   snprintf(devname,sizeof(devname),"/dev/%s",watchdogName);
   devname[sizeof(devname) - 1] = '\0';
-  free(watchdogName);
+
   wdogDescriptor = open(devname,O_WRONLY);
   if(wdogDescriptor < 0)
   {
@@ -324,6 +326,8 @@ EApiWDogStartEmul(
   EAPI_LIB_RETURN_SUCCESS(EApiWDogStartEmul, "");
 
 EAPI_LIB_ASSERT_EXIT
+        if(watchdogName != NULL)
+        free(watchdogName);
   return StatusCode;
 }
 
@@ -379,6 +383,13 @@ EApiWDogStopEmul(void)
                   EAPI_STATUS_UNSUPPORTED,
                   "No Watchdog found");
   }
+
+  EAPI_LIB_RETURN_ERROR_IF(
+      EApiWDogStopEmul,
+      (WatchdogState==WATCHDOG_DISABLED),
+      EAPI_STATUS_ERROR,
+      "Watchdog not started, therefore not possible to stop"
+      );
 
   ret = write(wdogDescriptor,"V", sizeof("V"));
   if (ret <= 0)
