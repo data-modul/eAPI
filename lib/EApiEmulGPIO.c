@@ -45,7 +45,6 @@
 #include <fcntl.h>
 
 
-
 /*
  *
  *
@@ -72,6 +71,17 @@ EApiGPIOGetLevelEmul(
     unsigned int i;
     int index = -1;
     int bank = 0;
+
+    *pLevel = 0;
+
+    if (gpioEnabled == 0)
+    {
+        EAPI_LIB_RETURN_ERROR(
+                    EApiGPIOGetLevelEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unrecognised GPIO chip"
+                    );
+    }
 
     switch (Id)
     {
@@ -116,18 +126,24 @@ EApiGPIOGetLevelEmul(
                 "Bit-mask Selects Invalid Bits"
                 );
 
-    *pLevel = 0;
-
     if (bank == 0 && index > -1) // individual request
     {
+        if(req[index].fd <= 0)
+        {
+            snprintf(err,sizeof(err),"Failed to access to pin %d",index);
+            EAPI_LIB_RETURN_ERROR(
+                        EApiGPIOGetLevelEmul,
+                        EAPI_STATUS_ERROR,
+                        err);
+        }
+
         struct gpiohandle_data data;
         memset(&data, 0, sizeof(data));
 
         ret = ioctl(req[index].fd, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &data);
         if(ret == -1)
         {
-            printf("debug_1\n");
-            snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE GET LINE VALUES IOCTL: %s",strerror(errno));
+            snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE GET LINE VALUES IOCTL %d: %s",index,strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiGPIOGetLevelEmul,
                         EAPI_STATUS_UNSUPPORTED,
@@ -141,16 +157,24 @@ EApiGPIOGetLevelEmul(
         {
             if (BitMask & (0x01 << i)) /* Bitmask is EAPI_GPIO_BITMASK_SELECT*/
             {
+                if(req[i].fd <= 0)
+                {
+                    snprintf(err,sizeof(err),"Failed to access to pin %d",i);
+                    EAPI_LIB_RETURN_ERROR(
+                                EApiGPIOGetLevelEmul,
+                                EAPI_STATUS_ERROR,
+                                err);
+                }
+
                 struct gpiohandle_data data;
                 memset(&data, 0, sizeof(data));
                 ret = ioctl(req[i].fd, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &data);
                 if(ret == -1)
                 {
-                    printf("debug_2\n");
                     snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE GET LINE VALUES of pin %d: %s",i,strerror(errno));
                     EAPI_LIB_RETURN_ERROR(
                                 EApiGPIOGetLevelEmul,
-                                EAPI_STATUS_UNSUPPORTED,
+                                EAPI_STATUS_ERROR,
                                 err);
                 }
                 *pLevel |= (data.values[0] << i);
@@ -171,15 +195,25 @@ EApiGPIOSetLevelEmul(
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-    unsigned i = 0;
-    struct gpiohandle_data data, readBack;
+
+    unsigned int i = 0;
+    struct gpiohandle_data data;//, readBack;
     int ret = 0;
     int index = -1;
     int bank = 0;
     uint32_t Direction = 0;
 
+    if (gpioEnabled == 0)
+    {
+        EAPI_LIB_RETURN_ERROR(
+                    EApiGPIOSetLevelEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unrecognised GPIO chip"
+                    );
+    }
+
     memset(&data, 0, sizeof(data));
-    memset(&readBack, 0, sizeof(readBack));
+    // memset(&readBack, 0, sizeof(readBack));
 
     switch (Id)
     {
@@ -235,25 +269,37 @@ EApiGPIOSetLevelEmul(
                         EAPI_STATUS_INVALID_PARAMETER,
                         "Cant Set Level on Pin that is set to input");
 
-        if (Level)
-            data.values[0] = EAPI_GPIO_HIGH;
-        else
-            data.values[0] = EAPI_GPIO_LOW;
-        /* set requested GPIO level*/
-        ret = ioctl(req[index].fd, GPIOHANDLE_SET_LINE_VALUES_IOCTL, &data);
-        if(ret == -1)
+        if(req[index].fd <= 0)
         {
-            printf("debug_3\n");
-            snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE SET LINE VALUES IOCTL: %s",strerror(errno));
+            snprintf(err,sizeof(err),"Failed to access to pin %d",index);
             EAPI_LIB_RETURN_ERROR(
                         EApiGPIOSetLevelEmul,
                         EAPI_STATUS_ERROR,
                         err);
         }
+        else
+        {
+            memset(&data, 0, sizeof(data));
+
+            if (Level)
+                data.values[0] = EAPI_GPIO_HIGH;
+            else
+                data.values[0] = EAPI_GPIO_LOW;
+            /* set requested GPIO level*/
+            ret = ioctl(req[index].fd, GPIOHANDLE_SET_LINE_VALUES_IOCTL, &data);
+            if(ret == -1)
+            {
+                snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE SET LINE VALUES IOCTL %d: %s",index,strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiGPIOSetLevelEmul,
+                            EAPI_STATUS_ERROR,
+                            err);
+            }
+        }
     }
     else /* bank request */
     {
-        if(BitMask & Direction != 0x00)
+        if((BitMask & Direction) != 0x00)
             EAPI_LIB_RETURN_ERROR(
                         EApiGPIOSetLevelEmul,
                         EAPI_STATUS_INVALID_PARAMETER,
@@ -263,6 +309,17 @@ EApiGPIOSetLevelEmul(
         {
             if (BitMask & (0x01 << i)) /* Bitmask is EAPI_GPIO_BITMASK_SELECT*/
             {
+                if(req[i].fd <= 0)
+                {
+                    snprintf(err,sizeof(err),"Failed to access to pin %d",i);
+                    EAPI_LIB_RETURN_ERROR(
+                                EApiGPIOSetLevelEmul,
+                                EAPI_STATUS_ERROR,
+                                err);
+                }
+
+                memset(&data, 0, sizeof(data));
+
                 if(Level & (0x01 << i))
                     data.values[0] = EAPI_GPIO_HIGH;
                 else
@@ -271,11 +328,10 @@ EApiGPIOSetLevelEmul(
                 ret = ioctl(req[i].fd, GPIOHANDLE_SET_LINE_VALUES_IOCTL, &data);
                 if(ret == -1)
                 {
-                    printf("debug_1\n");
                     snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE GET LINE VALUES of pin %d: %s",i,strerror(errno));
                     EAPI_LIB_RETURN_ERROR(
-                                EApiGPIOGetLevelEmul,
-                                EAPI_STATUS_UNSUPPORTED,
+                                EApiGPIOSetLevelEmul,
+                                EAPI_STATUS_ERROR,
                                 err);
                 }
             }
@@ -325,6 +381,17 @@ EApiGPIOGetDirectionEmul(
     int bank = 0;
     unsigned i;
     int ret;
+
+    *pDirection = 0;
+
+    if (gpioEnabled == 0)
+    {
+        EAPI_LIB_RETURN_ERROR(
+                    EApiGPIOGetDirectionEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unrecognised GPIO chip"
+                    );
+    }
 
     switch (Id)
     {
@@ -378,8 +445,7 @@ EApiGPIOGetDirectionEmul(
         ret = ioctl(gpiofd, GPIO_GET_LINEINFO_IOCTL, &linfo);
         if (ret == -1)
         {
-            printf("debug_6\n");
-            snprintf(err,sizeof(err),"Failed to issue lineinfo ioctl: %s",strerror(errno));
+            snprintf(err,sizeof(err),"Failed to issue lineinfo ioctl %d: %s",index,strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiGPIOGetDirectionEmul,
                         EAPI_STATUS_ERROR,
@@ -387,19 +453,14 @@ EApiGPIOGetDirectionEmul(
         }
         else
         {
-            if(linfo.flags == GPIOLINE_FLAG_IS_OUT)
+            if((linfo.flags & GPIOLINE_FLAG_IS_OUT) == GPIOLINE_FLAG_IS_OUT)
                 *pDirection = EAPI_GPIO_OUTPUT;
-            else if((linfo.flags != GPIOLINE_FLAG_KERNEL) &&
-                    (linfo.flags != GPIOLINE_FLAG_ACTIVE_LOW)&&
-                    (linfo.flags != GPIOLINE_FLAG_OPEN_DRAIN)&&
-                    (linfo.flags != GPIOLINE_FLAG_OPEN_SOURCE))
-
+            else
                 *pDirection = EAPI_GPIO_INPUT;
         }
     }
     else /* bank request */
     {
-        *pDirection = 0;
         for (i =0; i < gpioLines; i++)
         {
             unsigned bit = BitMask & ( 0x01 << i);
@@ -412,8 +473,7 @@ EApiGPIOGetDirectionEmul(
                 ret = ioctl(gpiofd, GPIO_GET_LINEINFO_IOCTL, &linfo);
                 if (ret == -1)
                 {
-                    printf("debug_7\n");
-                    snprintf(err,sizeof(err),"Failed to issue lineinfo ioctl: %s",strerror(errno));
+                    snprintf(err,sizeof(err),"Failed to issue lineinfo ioctl %d: %s",i,strerror(errno));
                     EAPI_LIB_RETURN_ERROR(
                                 EApiGPIOGetDirectionEmul,
                                 EAPI_STATUS_ERROR,
@@ -449,6 +509,15 @@ EApiGPIOSetDirectionEmul(
     int bank = 0;
     unsigned i;
     int ret;
+
+    if (gpioEnabled == 0)
+    {
+        EAPI_LIB_RETURN_ERROR(
+                    EApiGPIOSetDirectionEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unrecognised GPIO chip"
+                    );
+    }
 
     switch (Id)
     {
@@ -508,22 +577,25 @@ EApiGPIOSetDirectionEmul(
 
     if (bank == 0 && index > -1) /* individual request */
     {
-        close(req[index].fd);
+        if(req[index].fd > 0)
+            close(req[index].fd);
+
         req[index].lineoffsets[0] = index;
         req[index].lines = 1;
-        if (Direction == EAPI_GPIO_INPUT)
+
+        if (Direction) /* EAPI_GPIO_INPUT */
             req[index].flags = GPIOHANDLE_REQUEST_INPUT;
         else
         {
             req[index].flags = GPIOHANDLE_REQUEST_OUTPUT;
-            req[index].default_values[0] = 0;
+           // req[index].default_values[0] = 0;
         }
+        req[index].default_values[0] = 0;
 
         ret = ioctl(gpiofd, GPIO_GET_LINEHANDLE_IOCTL, &req[index]);
-        if(ret == -1)
+         if(ret == -1 || req[index].fd <= 0)
         {
-            printf("debug_8\n");
-            snprintf(err,sizeof(err),"Failed to issue GET LINEHANDLE IOCTL: %s",strerror(errno));
+            snprintf(err,sizeof(err),"Failed to issue GET LINEHANDLE IOCTL %d: %s",index,strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiGPIOSetDirectionEmul,
                         EAPI_STATUS_ERROR,
@@ -537,7 +609,8 @@ EApiGPIOSetDirectionEmul(
             unsigned bit = BitMask & (0x01 << i);
             if (bit != 0x00) /* Bitmask is EAPI_GPIO_BITMASK_SELECT */
             {
-                close(req[i].fd);
+                 if(req[i].fd > 0)
+                     close(req[i].fd);
                 req[i].lineoffsets[0] = i;
                 req[i].lines = 1;
                 if(Direction & (0x01 << i))
@@ -545,14 +618,15 @@ EApiGPIOSetDirectionEmul(
                 else
                 {
                     req[i].flags = GPIOHANDLE_REQUEST_OUTPUT;
-                    req[i].default_values[0] = 0;
+                   // req[i].default_values[0] = 0;
                 }
 
+                 req[i].default_values[0] = 0;
+
                 ret = ioctl(gpiofd, GPIO_GET_LINEHANDLE_IOCTL, &req[i]);
-                if(ret == -1)
+                if(ret == -1 || req[i].fd <= 0)
                 {
-                    printf("debug_9\n");
-                    snprintf(err,sizeof(err),"Failed to issue GET LINEHANDLE IOCTL: %s",strerror(errno));
+                    snprintf(err,sizeof(err),"Failed to issue GET LINEHANDLE IOCTL %d: %s",i,strerror(errno));
                     EAPI_LIB_RETURN_ERROR(
                                 EApiGPIOSetDirectionEmul,
                                 EAPI_STATUS_ERROR,
@@ -576,6 +650,36 @@ EApiGPIOGetDirectionCapsEmul(
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+
+    if (gpioEnabled == 0)
+    {
+        *pInputs=0x00;
+        *pOutputs=0x00;
+        EAPI_LIB_RETURN_ERROR(
+                    EApiGPIOGetDirectionCapsEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unrecognised GPIO chip"
+                    );
+    }
+
+    if((Id != EAPI_ID_GPIO_GPIO00) &&
+       (Id != EAPI_ID_GPIO_GPIO01) &&
+       (Id != EAPI_ID_GPIO_GPIO02) &&
+       (Id != EAPI_ID_GPIO_GPIO03) &&
+       (Id != EAPI_ID_GPIO_GPIO04) &&
+       (Id != EAPI_ID_GPIO_GPIO05) &&
+       (Id != EAPI_ID_GPIO_GPIO06) &&
+       (Id != EAPI_ID_GPIO_GPIO07) &&
+       (Id != EAPI_ID_GPIO_BANK00))
+    {
+        *pInputs=0x00;
+        *pOutputs=0x00;
+        EAPI_LIB_RETURN_ERROR(
+                    EApiGPIOSetDirectionEmul,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unrecognised GPIO ID"
+                    );
+    }
 
     *pInputs=pInputsGPIO;
     *pOutputs=pOutputsGPIO;

@@ -28,7 +28,8 @@ extern char err[256];
 
 extern struct gpiohandle_request *req;
 extern unsigned int gpioLines;
-extern     int gpiofd;
+extern int gpiofd;
+extern int gpioEnabled;
 
 
 

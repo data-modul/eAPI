@@ -41,6 +41,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <linux/gpio.h>
+#include <EApiDmo.h>
 
 FILE *OutputStream=NULL;
 uint8_t *eepromBuffer;
@@ -48,10 +49,11 @@ int board_type;
 char *hwname;
 char err[256];
 
-struct gpiohandle_request *req;
-static char *gpioName;
-unsigned int gpioLines;
+struct gpiohandle_request *req = NULL;
+static char *gpioName = NULL;
+unsigned int gpioLines = 0;
 int gpiofd  = -1;
+int gpioEnabled = 0 ;
 
 
 
@@ -357,7 +359,7 @@ EApiStatus_t list_gpio_device()
                     gpioName = (char*)malloc(sizeof(cinfo.name)*sizeof(char));
                     strncpy(gpioName, cinfo.name,sizeof(cinfo.name));
                     gpioLines = cinfo.lines;
-                    printf("%s  %d\n",gpioName, gpioLines);
+                    gpioEnabled = 1;
                     close(fd);
                     break;
                 }
@@ -385,19 +387,21 @@ EApiStatus_t gpio_dev_open(const char *device_name)
     gpiofd = open(chrdev_name, O_WRONLY);
     if(gpiofd < 0)
     {
+        gpioEnabled = 0;
         snprintf(err,sizeof(err),"Failed to open gpio device: %s",strerror(errno));
         EAPI_LIB_RETURN_ERROR(
                     gpio_dev_open,
-                    EAPI_STATUS_UNSUPPORTED,
+                    EAPI_STATUS_ERROR,
                     err);
     }
     req = (struct gpiohandle_request*) malloc(sizeof(struct gpiohandle_request)*gpioLines);
     if(req == NULL)
     {
+        gpioEnabled = 0;
         snprintf(err,sizeof(err),"Failed to malloc memory for gpio request handler.");
         EAPI_LIB_RETURN_ERROR(
                     gpio_dev_open,
-                    EAPI_STATUS_UNSUPPORTED,
+                    EAPI_STATUS_ERROR,
                     err);
     }
     for (i =0; i < gpioLines; i++)
@@ -414,11 +418,12 @@ EApiStatus_t gpio_dev_open(const char *device_name)
         ret = ioctl(gpiofd, GPIO_GET_LINEINFO_IOCTL, &linfo);
         if (ret == -1)
         {
-            snprintf(err,sizeof(err),"Failed to issue lineinfo ioctl: %s",strerror(errno));
-            EAPI_LIB_RETURN_ERROR(
-                        gpio_dev_open,
-                        EAPI_STATUS_UNSUPPORTED,
-                        err);
+            snprintf(err,sizeof(err),"Failed to issue lineinfo ioctl %d: %s",i,strerror(errno));
+            EAPI_FORMATED_MES('E',
+                              gpio_dev_open,
+                              EAPI_STATUS_ERROR,
+                              err
+                              );
         }
         else
         {
@@ -435,10 +440,11 @@ EApiStatus_t gpio_dev_open(const char *device_name)
         if(ret == -1 || req[i].fd <= 0)
         {
             snprintf(err,sizeof(err),"Failed to issue GET LINEHANDLE IOCTL for pin %d: %s",i,strerror(errno));
-            EAPI_LIB_RETURN_ERROR(
-                        gpio_dev_open,
-                        EAPI_STATUS_ERROR,
-                        err);
+            EAPI_FORMATED_MES('E',
+                              gpio_dev_open,
+                              EAPI_STATUS_ERROR,
+                              err
+                              );
         }
     }
 
@@ -453,7 +459,9 @@ EApiInitLib(){
     char path[NAME_MAX];
     FILE *f = NULL;
     char line[NAME_MAX];
-    char *p;
+
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+    EApiStatus_t StatusCode2=EAPI_STATUS_SUCCESS;
 
     if(logpath == NULL)
         OutputStream=NULL;
@@ -516,9 +524,18 @@ EApiInitLib(){
 
     /* ******************** GPIO ************************** */
     gpioName = NULL;
-    list_gpio_device();
-    if(gpioName != NULL && gpioLines > 0)
-        gpio_dev_open(gpioName);
+    StatusCode = list_gpio_device();
+    if((StatusCode == EAPI_STATUS_SUCCESS) &&
+       (gpioName != NULL && gpioLines > 0))
+    {
+        StatusCode2 = gpio_dev_open(gpioName);
+        if (StatusCode2 != EAPI_STATUS_SUCCESS)
+            EAPI_FORMATED_MES('E',
+                              EApiInitLib,
+                              EAPI_STATUS_ERROR,
+                              "Issue with Some GPIO pins"
+                              );
+    }
     else
         EAPI_FORMATED_MES('E',
                           EApiInitLib,
