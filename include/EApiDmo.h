@@ -18,7 +18,8 @@
 #define HWMON_PATH "/sys/class/hwmon/"
 #define HWMON_NAME "nct7802"
 
-extern uint8_t *eepromBuffer;
+//extern uint8_t *eepromBuffer;
+extern unsigned int eeprom_bus;
 
 extern int board_type;
 

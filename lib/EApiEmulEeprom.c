@@ -2,9 +2,15 @@
 #include <dirent.h>
 #include <string.h>
 #include <stdlib.h>
+#include <EApiI2c-dev.h>
+#include <fcntl.h>
+#include <errno.h>
 #include "EApiEmulEeprom.h"
 
+
+
 #define BUNCH 8
+static uint8_t *eepromBuffer = NULL;
 
 struct i2c_adap *more_adapters(struct i2c_adap *adapters, int n)
 {
@@ -163,7 +169,7 @@ int find_eeprom(void)
     return result;
 }
 
-uint8_t *eeprom_analyze(uint8_t *eeprom,uint8_t type, uint8_t reqIndex)
+uint8_t *eeprom_analyze(uint8_t type, uint8_t reqIndex)
 {
     int startDBIndex =0, endDBIndex;
     int lenDBIndex =0;
@@ -172,70 +178,341 @@ uint8_t *eeprom_analyze(uint8_t *eeprom,uint8_t type, uint8_t reqIndex)
     int counter = 0;
     int i =0;
     uint8_t *temp;
-    if (eeprom == NULL)
-    {
+
+    fill_eepromBuffer(type);
+
+    if (eepromBuffer == NULL)
         return NULL;
-    }
-    if (eeprom [1]!= '3' && eeprom[2] != 'P')
-    {
-        return NULL;
-    }
+
     temp = calloc (NAME_MAX, sizeof(uint8_t));
     if (!temp)
+    {
+        if(eepromBuffer)
+            free(eepromBuffer);
         return NULL;
-    startDBIndex = eeprom[4] * 2;
-    lenDBIndex = eeprom[startDBIndex + 1] << 8;
-    lenDBIndex |= eeprom[startDBIndex + 2];
+    }
+
+    startDBIndex = 0;
+    lenDBIndex = eepromBuffer[startDBIndex + 1] << 8;
+    lenDBIndex |= eepromBuffer[startDBIndex + 2];
     lenDBIndex = lenDBIndex*2;
     endDBIndex = lenDBIndex + startDBIndex;
 
-    do {
-        if(eeprom[startDBIndex + 3] == type)
-        {
-            reqLoc = eeprom[startDBIndex + reqIndex];
-        }
-        else
-        {
-            startDBIndex = endDBIndex;
-            lenDBIndex = eeprom[startDBIndex + 1] << 8;
-            lenDBIndex |= eeprom[startDBIndex + 2];
-            lenDBIndex = lenDBIndex*2;
-            endDBIndex = lenDBIndex + startDBIndex;
-            continue;
-        }
+    reqLoc = eepromBuffer[startDBIndex + reqIndex];
 
-        index = eeprom[ startDBIndex + 4] + 3 + startDBIndex;
-        counter = 0;
-        while (index < endDBIndex)
+    index = eepromBuffer[ startDBIndex + 4] + 3 + startDBIndex;
+    counter = 0;
+    while (index < endDBIndex)
+    {
+        i=0;
+        memset(temp,'\0',NAME_MAX);
+        while ((eepromBuffer[index] != 0x00) && (index < endDBIndex))
         {
-            i=0;
-            memset(temp,'\0',100);
-            while ((eeprom[index] != 0x00) && (index < endDBIndex))
-            {
-                temp[i] = eeprom[index];
-                i++;
-                index++;
-            }
-            if (i > 0)
-                counter++;
-
-            temp[i] = '\0';
-
-            if (counter == reqLoc)
-            {
-                return temp;
-            }
+            temp[i] = eepromBuffer[index];
+            i++;
             index++;
         }
+        if (i > 0)
+            counter++;
 
-        /* move to next DBlock */
-        startDBIndex = endDBIndex;
-        lenDBIndex = eeprom[startDBIndex + 1] << 8;
-        lenDBIndex |= eeprom[startDBIndex + 2];
-        lenDBIndex = lenDBIndex*2;
-        endDBIndex = lenDBIndex + startDBIndex;
-    } while (endDBIndex < EEPROM_SIZE);
+        temp[i] = '\0';
 
-    free(temp);
+        if (counter == reqLoc)
+        {
+            if(eepromBuffer)
+                free(eepromBuffer);
+            return temp;
+        }
+        index++;
+    }
+    if(temp)
+        free(temp);
+    if(eepromBuffer)
+        free(eepromBuffer);
     return NULL;
+}
+
+//uint8_t *eeprom_analyze(uint8_t type, uint8_t reqIndex)
+//{
+//    int startDBIndex =0, endDBIndex;
+//    int lenDBIndex =0;
+//    int reqLoc;
+//    int index;
+//    int counter = 0;
+//    int i =0;
+//    uint8_t *temp;
+
+
+//    fill_eepromBuffer(type);
+
+
+//    if (eepromBuffer == NULL)
+//    {
+//        return NULL;
+//    }
+//    //  if (eeprom [1]!= '3' && eeprom[2] != 'P')
+//    //  {
+//    //      return NULL;
+//    //  }
+//    temp = calloc (NAME_MAX, sizeof(uint8_t));
+//    if (!temp)
+//        return NULL;
+
+//    startDBIndex = eepromBuffer[4] * 2;
+//    lenDBIndex = eepromBuffer[startDBIndex + 1] << 8;
+//    lenDBIndex |= eepromBuffer[startDBIndex + 2];
+//    lenDBIndex = lenDBIndex*2;
+//    endDBIndex = lenDBIndex + startDBIndex;
+
+//    do {
+//        if(eepromBuffer[startDBIndex + 3] == type)
+//        {
+//            reqLoc = eepromBuffer[startDBIndex + reqIndex];
+//        }
+//        else
+//        {
+//            startDBIndex = endDBIndex;
+//            lenDBIndex = eeprom[startDBIndex + 1] << 8;
+//            lenDBIndex |= eeprom[startDBIndex + 2];
+//            lenDBIndex = lenDBIndex*2;
+//            endDBIndex = lenDBIndex + startDBIndex;
+//            continue;
+//        }
+
+//        index = eeprom[ startDBIndex + 4] + 3 + startDBIndex;
+//        counter = 0;
+//        while (index < endDBIndex)
+//        {
+//            i=0;
+//            memset(temp,'\0',100);
+//            while ((eeprom[index] != 0x00) && (index < endDBIndex))
+//            {
+//                temp[i] = eeprom[index];
+//                i++;
+//                index++;
+//            }
+//            if (i > 0)
+//                counter++;
+
+//            temp[i] = '\0';
+
+//            if (counter == reqLoc)
+//            {
+//                return temp;
+//            }
+//            index++;
+//        }
+
+//        /* move to next DBlock */
+//        startDBIndex = endDBIndex;
+//        lenDBIndex = eeprom[startDBIndex + 1] << 8;
+//        lenDBIndex |= eeprom[startDBIndex + 2];
+//        lenDBIndex = lenDBIndex*2;
+//        endDBIndex = lenDBIndex + startDBIndex;
+//    } while (endDBIndex < EEPROM_SIZE);
+
+//    free(temp);
+//    return NULL;
+//}
+
+EApiStatus_t fill_eepromBuffer(uint8_t type)
+{
+    uint32_t  Cmd ;
+    char devname[20];
+    int i2cDescriptor = 0;
+    int res = 0;
+    int iRead = 0;
+    uint8_t validation[5];
+    int iValidationRead = 0;
+    int found = 0;
+    int first_byte = 0;
+    int second_byte = 0;
+    int third_byte = 0;
+    int forth_byte = 0;
+    int iInsert = 0;
+    int length = 0;
+
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+
+    /* ******************** EEPROM ************************** */
+    if (eeprom_bus > 0) //means eeprom is available
+    {
+        /* read eeprom */
+        eepromBuffer = (uint8_t *)calloc(EEPROM_SIZE, sizeof(uint8_t));
+        if (!eepromBuffer)
+        {
+            snprintf(err,sizeof(err),"Error in Eeprom Allocating Memory\n");
+            EAPI_LIB_RETURN_ERROR(
+                        fill_eepromBuffer,
+                        EAPI_STATUS_ALLOC_ERROR,
+                        err);
+        }
+
+        /* open device */
+        snprintf(devname,sizeof(devname),"/dev/i2c/%d",eeprom_bus);
+        devname[sizeof(devname) - 1] = '\0';
+        i2cDescriptor = open(devname,O_RDWR);
+        if(i2cDescriptor < 0)
+        {
+            sprintf(devname,"/dev/i2c-%d",eeprom_bus);
+            i2cDescriptor = open(devname,O_RDWR);
+        }
+        if(i2cDescriptor < 0)
+        {
+            snprintf(err,sizeof(err),"Unrecognised Eeprom Address: %s\n ",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        fill_eepromBuffer,
+                        EAPI_STATUS_NOT_FOUND,
+                        err);
+        }
+        /* set slave address : set working device */
+        if(ioctl(i2cDescriptor, I2C_SLAVE, EEPROM_DEVICE) < 0)
+        {
+            snprintf(err,sizeof(err),"Cannot set Eeprom slave ddress: %s\n",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        fill_eepromBuffer,
+                        EAPI_STATUS_NOT_FOUND,
+                        err);
+        }
+
+        Cmd = EAPI_I2C_ENC_EXT_CMD(0x00);
+        res = i2c_smbus_write_byte_data(i2cDescriptor,(Cmd >> 8) & 0x0ff, Cmd & 0x0ff); /* write 16bits add */
+        if (res < 0)
+        {
+            snprintf(err,sizeof(err),"Cannot write into Eeprom: %s\n",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        fill_eepromBuffer,
+                        EAPI_STATUS_WRITE_ERROR,
+                        err);
+        }
+
+        /* check correctness of Eeprom*/
+        while(iValidationRead < 5)
+        {
+            res = i2c_smbus_read_byte(i2cDescriptor);
+            if (res < 0)
+            {
+                snprintf(err,sizeof(err),"Cannot read from Eeprom: %s\n",strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            fill_eepromBuffer,
+                            EAPI_STATUS_READ_ERROR,
+                            err);
+            }
+            validation[iValidationRead] = res;
+            iValidationRead++;
+        }
+        if (validation [1]!= '3' && validation[2] != 'P')
+        {
+            snprintf(err,sizeof(err),"Not Valid Eeprom\n");
+            EAPI_LIB_RETURN_ERROR(
+                        fill_eepromBuffer,
+                        EAPI_STATUS_READ_ERROR,
+                        err);
+        }
+        iRead = validation[4] * 2;
+        Cmd = EAPI_I2C_ENC_EXT_CMD(validation[4] * 2);
+        res = i2c_smbus_write_byte_data(i2cDescriptor,(Cmd >> 8) & 0x0ff, Cmd & 0x0ff); /* write 16bits add */
+        if (res < 0)
+        {
+            snprintf(err,sizeof(err),"Cannot write into Eeprom: %s\n",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        fill_eepromBuffer,
+                        EAPI_STATUS_WRITE_ERROR,
+                        err);
+        }
+
+        while (found == 0 && iRead < EEPROM_SIZE)
+        {
+            /* read 4 first bytes*/
+            res = i2c_smbus_read_byte(i2cDescriptor);
+            if (res < 0)
+            {
+                snprintf(err,sizeof(err),"Cannot read from Eeprom: %s\n",strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            fill_eepromBuffer,
+                            EAPI_STATUS_READ_ERROR,
+                            err);
+            }
+            else
+            {
+                if (first_byte == 0)
+                {
+                    if (res == 0xd0)
+                    {
+                        memset(eepromBuffer,0,EEPROM_SIZE);
+                        iInsert =0;
+                        eepromBuffer[iInsert] = (uint8_t) res;
+                        first_byte =1;
+                        iInsert++;
+                    }
+                }
+                else if (second_byte == 0 && first_byte == 1)
+                {
+                    second_byte = 1;
+                    eepromBuffer[iInsert] = (uint8_t) res;
+                    iInsert++;
+                }
+                else if (third_byte == 0 && second_byte == 1 )
+                {
+                    third_byte =1;
+                    eepromBuffer[iInsert] = (uint8_t) res;
+                    length = eepromBuffer[1] << 8;
+                    length |= eepromBuffer[2];
+                    length = length*2;
+                    iInsert++;
+                }
+                else if (forth_byte == 0 && third_byte ==1)
+                {
+                    if (res == type)
+                    {
+                        eepromBuffer[iInsert] = (uint8_t) res;
+                        forth_byte =1;
+                        iInsert++;
+                    }
+                    else /* change to next block*/
+                    {
+                        first_byte = 0;
+                        second_byte = 0;
+                        third_byte = 0;
+                        forth_byte = 0;
+
+                        Cmd = EAPI_I2C_ENC_EXT_CMD(length + iRead - 3);
+                        iRead = length + iRead - 4;
+
+                        res = i2c_smbus_write_byte_data(i2cDescriptor,(Cmd >> 8) & 0x0ff, Cmd & 0x0ff); /* write 16bits add */
+                        if (res < 0)
+                        {
+                            snprintf(err,sizeof(err),"Cannot write into Eeprom: %s\n",strerror(errno));
+                            EAPI_LIB_RETURN_ERROR(
+                                        fill_eepromBuffer,
+                                        EAPI_STATUS_WRITE_ERROR,
+                                        err);
+                        }
+                    }
+                }
+                else if (forth_byte == 1)
+                {
+                    if (iInsert < (length - 1))
+                    {
+                        eepromBuffer[iInsert] = (uint8_t) res;
+                        iInsert++;
+                    }
+                    else
+                        found =1;
+                }
+            }
+            iRead++;
+        }
+        close(i2cDescriptor);
+    }
+    else
+    {
+        EAPI_LIB_RETURN_ERROR(
+                    fill_eepromBuffer,
+                    EAPI_STATUS_ERROR,
+                    "No Eeprom Bus is found");
+    }
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
+
 }

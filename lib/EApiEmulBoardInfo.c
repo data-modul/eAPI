@@ -81,9 +81,11 @@ EApiBoardGetStringAEmul(
 
 
     if (Id ==  EAPI_DMO_ID_BOARD_MANUFACTURING_DATE_STR)
-        info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_DATE_TYPE,MANUFACTURE_DATE_ASCII_IND);
+        //info = (char*)eeprom_analyze(eepromBuffer,MANUFACTURE_DATE_TYPE,MANUFACTURE_DATE_ASCII_IND);
+        info = (char*)eeprom_analyze(MANUFACTURE_DATE_TYPE,MANUFACTURE_DATE_ASCII_IND);
     else if (Id ==  EAPI_DMO_ID_BOARD_ID_STR)
-        info = (char*)eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
+       // info = (char*)eeprom_analyze(eepromBuffer,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
+         info = (char*)eeprom_analyze(BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
     else if (Id == EAPI_ID_BOARD_PLATFORM_TYPE_STR)
     {
         info = (char *)calloc(NAME_MAX, sizeof(char));

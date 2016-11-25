@@ -44,7 +44,7 @@
 #include <EApiDmo.h>
 
 FILE *OutputStream=NULL;
-uint8_t *eepromBuffer;
+unsigned int eeprom_bus = 0;
 int board_type;
 char *hwname;
 char err[256];
@@ -187,121 +187,6 @@ EApiStatus_t find_hwmon()
                     "Info: No HWMON is found.");
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
-}
-
-EApiStatus_t fill_eepromBuffer(uint8_t **result)
-{
-    int eeprom_bus;
-    uint32_t  Cmd ;
-    char devname[20];
-    int i2cDescriptor = 0;
-    int res = 0;
-    int iRead = 0;
-    //   uint8_t * pBoardType;
-    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-
-    /* ******************** EEPROM ************************** */
-    /* Find Eeprom i2c-bus and read & fill the buffer */
-    eeprom_bus = find_eeprom();
-
-    if (eeprom_bus >= 0)
-    {
-        /* read eeprom */
-        *result = (uint8_t *)calloc(EEPROM_SIZE, sizeof(uint8_t));
-        if (!*result)
-        {
-            snprintf(err,sizeof(err),"Error in Eeprom Allocating Memory\n");
-            printf("%s",err);
-            EAPI_LIB_RETURN_ERROR(
-                        fill_eepromBuffer,
-                        EAPI_STATUS_ALLOC_ERROR,
-                        err);
-        }
-        Cmd = EAPI_I2C_ENC_EXT_CMD(0x00);
-
-        /* open device */
-        snprintf(devname,sizeof(devname),"/dev/i2c/%d",eeprom_bus);
-        devname[sizeof(devname) - 1] = '\0';
-        i2cDescriptor = open(devname,O_RDWR);
-        if(i2cDescriptor < 0)
-        {
-            sprintf(devname,"/dev/i2c-%d",eeprom_bus);
-            i2cDescriptor = open(devname,O_RDWR);
-        }
-        if(i2cDescriptor < 0)
-        {
-            snprintf(err,sizeof(err),"Unrecognised Eeprom Address: %s\n ",strerror(errno));
-            printf("%s",err);
-            EAPI_LIB_RETURN_ERROR(
-                        fill_eepromBuffer,
-                        EAPI_STATUS_NOT_FOUND,
-                        err);
-        }
-        /* set slave address : set working device */
-        if(ioctl(i2cDescriptor, I2C_SLAVE, EEPROM_DEVICE) < 0)
-        {
-            snprintf(err,sizeof(err),"Cannot set Eeprom slave ddress: %s\n",strerror(errno));
-            printf("%s",err);
-            EAPI_LIB_RETURN_ERROR(
-                        fill_eepromBuffer,
-                        EAPI_STATUS_NOT_FOUND,
-                        err);
-        }
-        if(EEPROM_SIZE)
-        {
-            res = i2c_smbus_write_byte_data(i2cDescriptor,(Cmd >> 8) & 0x0ff, Cmd & 0x0ff); /* write 16bits add */
-            if (res < 0)
-            {
-                snprintf(err,sizeof(err),"Cannot write into Eeprom: %s\n",strerror(errno));
-                printf("%s",err);
-                EAPI_LIB_RETURN_ERROR(
-                            fill_eepromBuffer,
-                            EAPI_STATUS_WRITE_ERROR,
-                            err);
-            }
-            while (iRead < EEPROM_SIZE)
-            {
-                res = i2c_smbus_read_byte(i2cDescriptor);
-                if (res < 0)
-                {
-                    snprintf(err,sizeof(err),"Cannot read from Eeprom: %s\n",strerror(errno));
-                    printf("%s",err);
-                    EAPI_LIB_RETURN_ERROR(
-                                fill_eepromBuffer,
-                                EAPI_STATUS_READ_ERROR,
-                                err);
-                }
-                else
-                {
-                    (*result)[iRead] = (uint8_t) res;
-                }
-                iRead++;
-            }
-            close(i2cDescriptor);
-        }
-        /* ********************************************** */
-        //        /* detect_board_type */
-        //        pBoardType = eeprom_analyze(*result,BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
-        //        board_type = UNKNOWN;
-        //        if (pBoardType)
-        //        {
-        //            if(!strncmp((const char*)pBoardType,"BBW6",4))
-        //                board_type = BBW6;
-        //            else if(!strncmp((const char*)pBoardType,"CBS6",4))
-        //                board_type = CBS6;
-        //            free(pBoardType);
-        //        }
-    }
-    else
-    {
-        EAPI_LIB_RETURN_ERROR(
-                    fill_eepromBuffer,
-                    EAPI_STATUS_ERROR,
-                    "No Eeprom Bus is found");
-    }
-    EAPI_LIB_ASSERT_EXIT
-            return StatusCode;
-
 }
 
 EApiStatus_t list_gpio_device()
@@ -481,8 +366,7 @@ EApiInitLib(){
              LIB_VERSION, LIB_REVISION, LIB_BUILD
              );
     /* ******************** EEPROM ************************** */
-    eepromBuffer = NULL;
-    fill_eepromBuffer(&eepromBuffer);
+    eeprom_bus = find_eeprom();
 
     /* ******************** Detect_board_type ************************** */
     strncpy(path, "/sys/class/dmi/id/board_name", sizeof("/sys/class/dmi/id/board_name"));
@@ -555,9 +439,6 @@ EApiUninitLib(){
              "#\n"
              );
     unsigned i =0;
-
-    if (eepromBuffer != NULL)
-        free(eepromBuffer);
 
     if(OutputStream!=NULL){
         fclose(OutputStream);
