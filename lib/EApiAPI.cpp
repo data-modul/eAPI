@@ -572,11 +572,10 @@ EApiVgaSetBacklightEnable(
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-
     EAPI_CHECK_INITIALIZED(EApiVgaSetBacklightEnable);
     EAPI_LIB_ASSERT_PARAMATER_CHECK(
                 EApiVgaSetBacklightEnable,
-                ((Enable!=EAPI_BACKLIGHT_SET_ON)||(Enable!=EAPI_BACKLIGHT_SET_OFF)),
+                ((Enable!=EAPI_BACKLIGHT_SET_ON) && (Enable!=EAPI_BACKLIGHT_SET_OFF)),
                 "Enable Invalid Value"
                 );
 
@@ -609,11 +608,11 @@ EApiVgaSetBacklightBrightness(
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EAPI_CHECK_INITIALIZED(EApiVgaSetBacklightBrightness);
-    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-                EApiVgaSetBacklightBrightness,
-                (Bright>EAPI_BACKLIGHT_SET_BRIGHTEST),
-                "Brightness Invalid Value"
-                );
+//    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+//                EApiVgaSetBacklightBrightness,
+//                (Bright>EAPI_BACKLIGHT_SET_BRIGHTEST),
+//                "Brightness Invalid Value"
+//                );
 
     StatusCode=EApiVgaSetBacklightBrightnessEmul(Id, Bright);
     EAPI_LIB_ASSERT_EXIT
