@@ -8,9 +8,14 @@
 #include "EApiEmulEeprom.h"
 
 
-
 #define BUNCH 8
+#define I2C_DMEC                "i2c-dmec"
+#define EEPROM_SIZE             (4*1024)
+#define VENDOR_SPECIFIC_BLOCK   0xf0
+
 static uint8_t *eepromBuffer = NULL;
+
+int userspaceBuffer_Cmd = 0;
 
 struct i2c_adap *more_adapters(struct i2c_adap *adapters, int n)
 {
@@ -169,7 +174,7 @@ int find_eeprom(void)
     return result;
 }
 
-uint8_t *eeprom_analyze(uint8_t type, uint8_t reqIndex)
+uint8_t *eeprom_analyze(uint8_t block, uint8_t type, uint8_t reqIndex)
 {
     int startDBIndex =0, endDBIndex;
     int lenDBIndex =0;
@@ -179,7 +184,7 @@ uint8_t *eeprom_analyze(uint8_t type, uint8_t reqIndex)
     int i =0;
     uint8_t *temp;
 
-    fill_eepromBuffer(type);
+    fill_eepromBuffer(block, type);
 
     if (eepromBuffer == NULL)
         return NULL;
@@ -232,90 +237,7 @@ uint8_t *eeprom_analyze(uint8_t type, uint8_t reqIndex)
     return NULL;
 }
 
-//uint8_t *eeprom_analyze(uint8_t type, uint8_t reqIndex)
-//{
-//    int startDBIndex =0, endDBIndex;
-//    int lenDBIndex =0;
-//    int reqLoc;
-//    int index;
-//    int counter = 0;
-//    int i =0;
-//    uint8_t *temp;
-
-
-//    fill_eepromBuffer(type);
-
-
-//    if (eepromBuffer == NULL)
-//    {
-//        return NULL;
-//    }
-//    //  if (eeprom [1]!= '3' && eeprom[2] != 'P')
-//    //  {
-//    //      return NULL;
-//    //  }
-//    temp = calloc (NAME_MAX, sizeof(uint8_t));
-//    if (!temp)
-//        return NULL;
-
-//    startDBIndex = eepromBuffer[4] * 2;
-//    lenDBIndex = eepromBuffer[startDBIndex + 1] << 8;
-//    lenDBIndex |= eepromBuffer[startDBIndex + 2];
-//    lenDBIndex = lenDBIndex*2;
-//    endDBIndex = lenDBIndex + startDBIndex;
-
-//    do {
-//        if(eepromBuffer[startDBIndex + 3] == type)
-//        {
-//            reqLoc = eepromBuffer[startDBIndex + reqIndex];
-//        }
-//        else
-//        {
-//            startDBIndex = endDBIndex;
-//            lenDBIndex = eeprom[startDBIndex + 1] << 8;
-//            lenDBIndex |= eeprom[startDBIndex + 2];
-//            lenDBIndex = lenDBIndex*2;
-//            endDBIndex = lenDBIndex + startDBIndex;
-//            continue;
-//        }
-
-//        index = eeprom[ startDBIndex + 4] + 3 + startDBIndex;
-//        counter = 0;
-//        while (index < endDBIndex)
-//        {
-//            i=0;
-//            memset(temp,'\0',100);
-//            while ((eeprom[index] != 0x00) && (index < endDBIndex))
-//            {
-//                temp[i] = eeprom[index];
-//                i++;
-//                index++;
-//            }
-//            if (i > 0)
-//                counter++;
-
-//            temp[i] = '\0';
-
-//            if (counter == reqLoc)
-//            {
-//                return temp;
-//            }
-//            index++;
-//        }
-
-//        /* move to next DBlock */
-//        startDBIndex = endDBIndex;
-//        lenDBIndex = eeprom[startDBIndex + 1] << 8;
-//        lenDBIndex |= eeprom[startDBIndex + 2];
-//        lenDBIndex = lenDBIndex*2;
-//        endDBIndex = lenDBIndex + startDBIndex;
-//    } while (endDBIndex < EEPROM_SIZE);
-
-//    free(temp);
-//    return NULL;
-//}
-
-EApiStatus_t fill_eepromBuffer(uint8_t type)
+EApiStatus_t fill_eepromBuffer(uint8_t block, uint8_t type)
 {
     uint32_t  Cmd ;
     char devname[20];
@@ -323,6 +245,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t type)
     int res = 0;
     int iRead = 0;
     uint8_t validation[5];
+    uint8_t tempEeprom[3]={0,0,0};
     int iValidationRead = 0;
     int found = 0;
     int first_byte = 0;
@@ -337,17 +260,6 @@ EApiStatus_t fill_eepromBuffer(uint8_t type)
     /* ******************** EEPROM ************************** */
     if (eeprom_bus > 0) //means eeprom is available
     {
-        /* read eeprom */
-        eepromBuffer = (uint8_t *)calloc(EEPROM_SIZE, sizeof(uint8_t));
-        if (!eepromBuffer)
-        {
-            snprintf(err,sizeof(err),"Error in Eeprom Allocating Memory\n");
-            EAPI_LIB_RETURN_ERROR(
-                        fill_eepromBuffer,
-                        EAPI_STATUS_ALLOC_ERROR,
-                        err);
-        }
-
         /* open device */
         snprintf(devname,sizeof(devname),"/dev/i2c/%d",eeprom_bus);
         devname[sizeof(devname) - 1] = '\0';
@@ -437,34 +349,46 @@ EApiStatus_t fill_eepromBuffer(uint8_t type)
             {
                 if (first_byte == 0)
                 {
-                    if (res == 0xd0)
+                    if (res == block)
                     {
-                        memset(eepromBuffer,0,EEPROM_SIZE);
-                        iInsert =0;
-                        eepromBuffer[iInsert] = (uint8_t) res;
+                        tempEeprom[0] = (uint8_t) res;
                         first_byte =1;
-                        iInsert++;
+                        if(block == VENDOR_SPECIFIC_BLOCK)
+                            userspaceBuffer_Cmd = iRead;
                     }
                 }
                 else if (second_byte == 0 && first_byte == 1)
                 {
                     second_byte = 1;
-                    eepromBuffer[iInsert] = (uint8_t) res;
-                    iInsert++;
+                    tempEeprom[1] = (uint8_t) res;
                 }
                 else if (third_byte == 0 && second_byte == 1 )
                 {
                     third_byte =1;
-                    eepromBuffer[iInsert] = (uint8_t) res;
-                    length = eepromBuffer[1] << 8;
-                    length |= eepromBuffer[2];
+                    tempEeprom[2] = (uint8_t) res;
+                    length = tempEeprom[1] << 8;
+                    length |= tempEeprom[2];
                     length = length*2;
-                    iInsert++;
                 }
                 else if (forth_byte == 0 && third_byte ==1)
                 {
                     if (res == type)
                     {
+                        eepromBuffer=(uint8_t *)malloc((length) * sizeof(uint8_t));
+                        if (!eepromBuffer)
+                        {
+                            snprintf(err,sizeof(err),"Error in Eeprom Allocating Memory\n");
+                            EAPI_LIB_RETURN_ERROR(
+                                        fill_eepromBuffer,
+                                        EAPI_STATUS_ALLOC_ERROR,
+                                        err);
+                        }
+                       // if(block == VENDOR_SPECIFIC_BLOCK)
+                         //   size_userspacebuf = length;
+                        eepromBuffer[0] = tempEeprom[0];
+                        eepromBuffer[1] = tempEeprom[1];
+                        eepromBuffer[2] = tempEeprom[2];
+                        iInsert =3;
                         eepromBuffer[iInsert] = (uint8_t) res;
                         forth_byte =1;
                         iInsert++;
@@ -475,6 +399,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t type)
                         second_byte = 0;
                         third_byte = 0;
                         forth_byte = 0;
+                        userspaceBuffer_Cmd = -1;
 
                         Cmd = EAPI_I2C_ENC_EXT_CMD(length + iRead - 3);
                         iRead = length + iRead - 4;
@@ -492,7 +417,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t type)
                 }
                 else if (forth_byte == 1)
                 {
-                    if (iInsert < (length - 1))
+                    if (iInsert < length)
                     {
                         eepromBuffer[iInsert] = (uint8_t) res;
                         iInsert++;
@@ -504,6 +429,7 @@ EApiStatus_t fill_eepromBuffer(uint8_t type)
             iRead++;
         }
         close(i2cDescriptor);
+        EAPI_LIB_RETURN_SUCCESS(fill_eepromBuffer, "");
     }
     else
     {
@@ -515,4 +441,39 @@ EApiStatus_t fill_eepromBuffer(uint8_t type)
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 
+}
+
+uint8_t *eeprom_userSpace()
+{
+    uint8_t *temp_userspace;
+    unsigned int size_userspacebuf = 0;
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+
+    StatusCode = fill_eepromBuffer(VENDOR_SPECIFIC_BLOCK, 0x11);
+    if (StatusCode != EAPI_STATUS_SUCCESS || eepromBuffer == NULL)
+        return NULL;
+
+    size_userspacebuf = eepromBuffer[1] << 8;
+    size_userspacebuf |= eepromBuffer[2];
+    size_userspacebuf = size_userspacebuf*2;
+
+    if (size_userspacebuf == 0 )
+    {
+        if(eepromBuffer)
+            free(eepromBuffer);
+        return NULL;
+    }
+
+    temp_userspace = calloc (size_userspacebuf, sizeof(uint8_t));
+    if (!temp_userspace)
+    {
+        if(eepromBuffer)
+            free(eepromBuffer);
+        return NULL;
+    }
+    memcpy(temp_userspace, eepromBuffer, size_userspacebuf * sizeof(uint8_t));
+
+    if(eepromBuffer)
+        free(eepromBuffer);
+    return temp_userspace;
 }

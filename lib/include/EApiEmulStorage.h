@@ -46,14 +46,14 @@ uint32_t
 EApiStorageAreaWriteEmul(
     __IN uint32_t Id      , 
     __IN uint32_t Offset  , 
-    __IN    void *pBuffer , 
+    __IN    uint8_t *pBuffer ,
     __IN uint32_t ByteCnt
     );
 uint32_t 
 EApiStorageAreaReadEmul(
     __IN uint32_t Id      , 
     __IN uint32_t Offset  , 
-    __OUT   void *pBuffer , 
+    __OUT   uint8_t *pBuffer ,
     __IN uint32_t ByteCnt
     );
 uint32_t 

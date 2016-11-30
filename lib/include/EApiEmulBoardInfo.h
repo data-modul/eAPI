@@ -47,6 +47,8 @@ extern "C" {
 
 #include "EApiEmulEeprom.h"
 
+#define SMBIOS_BLOCK           0xd0
+
 #define MANUFACTURE_TYPE        0x02
 #define PRODUCT_TYPE            2
 #define VERSION_TYPE            2

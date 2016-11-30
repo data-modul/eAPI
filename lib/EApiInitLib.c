@@ -45,6 +45,7 @@
 
 FILE *OutputStream=NULL;
 unsigned int eeprom_bus = 0;
+uint8_t *eeprom_userSpaceBuf = NULL;
 int board_type;
 char *hwname;
 char err[256];
@@ -54,7 +55,6 @@ static char *gpioName = NULL;
 unsigned int gpioLines = 0;
 int gpiofd  = -1;
 int gpioEnabled = 0 ;
-
 
 
 struct gpio_flag {
@@ -367,6 +367,8 @@ EApiInitLib(){
              );
     /* ******************** EEPROM ************************** */
     eeprom_bus = find_eeprom();
+    /* ******************** USER SPACE EEPROM ************************** */
+eeprom_userSpaceBuf = eeprom_userSpace();
 
     /* ******************** Detect_board_type ************************** */
     strncpy(path, "/sys/class/dmi/id/board_name", sizeof("/sys/class/dmi/id/board_name"));
@@ -461,6 +463,9 @@ EApiUninitLib(){
 
     if(gpiofd >= 0)
         close(gpiofd);
+
+    if(eeprom_userSpaceBuf)
+        free(eeprom_userSpaceBuf);
 
     return EAPI_STATUS_SUCCESS;
 }

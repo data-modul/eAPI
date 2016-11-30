@@ -9,9 +9,9 @@ extern "C" {
 #include <stdint.h>
 #include <EApiLib.h>
 
-#define I2C_DMEC "i2c-dmec"
-#define EEPROM_DEVICE  0x50
-#define EEPROM_SIZE  (4*1024)
+#define EEPROM_DEVICE           0x50
+
+extern int userspaceBuffer_Cmd;
 
 struct i2c_adap {
 	int nr;
@@ -21,10 +21,12 @@ struct i2c_adap {
 struct i2c_adap *more_adapters(struct i2c_adap *adapters, int n);
 struct i2c_adap *gather_i2c_busses(void);
 void free_adapters(struct i2c_adap *adapters);
+EApiStatus_t fill_eepromBuffer(uint8_t block, uint8_t type);
+
 int find_eeprom(void);
-uint8_t *eeprom_analyze(uint8_t type, uint8_t
+uint8_t *eeprom_analyze(uint8_t block, uint8_t type, uint8_t
         reqIndex);
-EApiStatus_t fill_eepromBuffer(uint8_t type);
+uint8_t *eeprom_userSpace();
 
 #ifdef __cplusplus
 }

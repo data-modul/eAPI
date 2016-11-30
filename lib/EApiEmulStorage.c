@@ -8,15 +8,15 @@
  *I   Copyright: Copyright (c) 2002-2009, Kontron Embedded Modules GmbH
  *I      Author: John Kearney,                  John.Kearney@kontron.com
  *I
- *I     License: All rights reserved. This program and the accompanying 
- *I              materials are licensed and made available under the 
- *I              terms and conditions of the BSD License which 
- *I              accompanies this distribution. The full text of the 
- *I              license may be found at 
+ *I     License: All rights reserved. This program and the accompanying
+ *I              materials are licensed and made available under the
+ *I              terms and conditions of the BSD License which
+ *I              accompanies this distribution. The full text of the
+ *I              license may be found at
  *I              http://opensource.org/licenses/bsd-license.php
- *I              
+ *I
  *I              THE PROGRAM IS DISTRIBUTED UNDER THE BSD LICENSE ON AN "
- *I              AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS OF 
+ *I              AS IS" BASIS, WITHOUT WARRANTIES OR REPRESENTATIONS OF
  *I              ANY KIND, EITHER EXPRESS OR IMPLIED.
  *I
  *I Description: Auto Created for EApiEmulStorage.c
@@ -36,190 +36,221 @@
 
 #include <EApiLib.h>
 #include <stdio.h>
+#include "EApiEmulEeprom.h"
 
 
-
+#define USERSPACE_BLOCKLENGTH 1
 
 /*
  *
- *  
  *
- *  S T O R A G E 
+ *
+ *  S T O R A G E
  *
  *
  *
  */
-typedef struct StorageAreaMapping_s{
-  EApiId_t Id          ; /* EAPI Storage Area Id */
-  uint32_t StorageSize ; /* Storage Area Size */
-  uint32_t WBlockLength; /* Block Lenght/Alignment */
-  uint8_t *pu8Buffer   ; /* Pointer to Storage pu8Buffer */
-  const char *const cszFilename;
-  FILE     *FStream;
-}StorageAreaMapping_t;
-static uint8_t StorageID0[32]={0};
-static uint8_t StorageID1[1024*4]={0};
-StorageAreaMapping_t StorageAreaTbl[]={
-  {
-    EAPI_ID_STORAGE_STD        ,
-    sizeof(StorageID0)         ,
-    ELEMENT_SIZE(StorageID0)   ,
-    StorageID0                 ,
-    "EApiStorage0.EMUL"        ,
-    NULL
-  },
-  {
-    EAPI_PMG_ID_STORAGE_SAMPLE ,
-    sizeof(StorageID1)         ,
-    ELEMENT_SIZE(StorageID1)*1024 ,
-    StorageID1                 ,
-    "EApiStorage1.EMUL"        ,
-    NULL
-  },
-};
-
 
 EApiStatus_t 
 EApiStorageCapEmul (
-    __IN      EApiId_t  Id          , 
-    __OUTOPT  uint32_t *pStorageSize, 
-    __OUTOPT  uint32_t *pBlockLength
-    )
+        __IN      EApiId_t  Id          ,
+        __OUTOPT  uint32_t *pStorageSize,
+        __OUTOPT  uint32_t *pBlockLength
+        )
 {
-  EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-  StorageAreaMapping_t *pCurStorageDesc;
-  unsigned i;
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+    uint32_t storageSize = 0;
 
-  for(
-      i=ARRAY_SIZE(StorageAreaTbl),
-      pCurStorageDesc=StorageAreaTbl;
-      i--;
-      pCurStorageDesc++)
-  {
-      if(pCurStorageDesc->Id==Id)
-      {
-        *pStorageSize=pCurStorageDesc->StorageSize;
-        *pBlockLength=pCurStorageDesc->WBlockLength;
-        EAPI_LIB_RETURN_SUCCESS(EApiStorageCap, "");
-      }
-  }
+    if(Id != EAPI_ID_STORAGE_STD)
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageCapEmul  ,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unrecognised Storage ID"
+                    );
 
+    /* find vendor specific block of Eeprom */
+    if (eeprom_userSpaceBuf == NULL || userspaceBuffer_Cmd == -1)
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageCapEmul        ,
+                    EAPI_STATUS_UNSUPPORTED   ,
+                    "Unrecognised Storage"
+                    );
 
+    /* validation: F0,?,?,11,AF,0,... */
+    if ((eeprom_userSpaceBuf [0] != 0xF0) ||
+            (eeprom_userSpaceBuf [3] != 0x11) ||
+            (eeprom_userSpaceBuf [4] != 0xAF) ||
+            (eeprom_userSpaceBuf [5] != 0x00))
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageCapEmul        ,
+                    EAPI_STATUS_READ_ERROR   ,
+                    "Unrecognised Storage"
+                    );
 
+    storageSize = eeprom_userSpaceBuf[1] << 8;
+    storageSize |= eeprom_userSpaceBuf[2];
+    storageSize = storageSize*2;
+    storageSize = storageSize - 6;
 
+    *pStorageSize = storageSize;
+    *pBlockLength=USERSPACE_BLOCKLENGTH;
 
+    EAPI_LIB_RETURN_SUCCESS(EApiStorageCap, "");
 
-  EAPI_LIB_RETURN_ERROR(
-    EApiStorageCapEmul        ,
-    EAPI_STATUS_UNSUPPORTED   ,
-    "Unrecognised Storage ID"
-    );
-EAPI_LIB_ASSERT_EXIT
+    EAPI_LIB_ASSERT_EXIT
 
-  return StatusCode;
+            return StatusCode;
 }
 EApiStatus_t 
 EApiStorageAreaReadEmul(
-  __IN  EApiId_t Id     , 
-  __IN  uint32_t Offset , 
-  __OUT    void *pvBuffer, 
-  __IN  uint32_t ByteCnt
-  )
+        __IN  EApiId_t Id     ,
+        __IN  uint32_t Offset ,
+        __OUT    uint8_t *pvBuffer,
+        __IN  uint32_t ByteCnt
+        )
 {
-  EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-  StorageAreaMapping_t *pCurStorageDesc;
-  unsigned i;
+    uint32_t storageSize = 0;
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
 
-  for(
-      i=ARRAY_SIZE(StorageAreaTbl),
-      pCurStorageDesc=StorageAreaTbl;
-      i--;
-      pCurStorageDesc++)
-  {
-      if(pCurStorageDesc->Id==Id)
-      {
-        EAPI_LIB_RETURN_ERROR_IF(
-          EApiStorageAreaReadEmul                         ,
-          (Offset+ByteCnt)>pCurStorageDesc->StorageSize  ,
-          EAPI_STATUS_INVALID_BLOCK_LENGTH                ,
-          "Read Len extends beyond End of Storage Area"
-          );
-        
-#if 0
-        memcpy(pvBuffer, pCurStorageDesc->pu8Buffer+Offset, ByteCnt);
-#else
-        fseek(pCurStorageDesc->FStream, Offset, SEEK_SET);
-        if(ByteCnt!=fread(pvBuffer, sizeof(uint8_t), ByteCnt, pCurStorageDesc->FStream)){
-    }
-#endif
+    if(Id != EAPI_ID_STORAGE_STD)
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageAreaReadEmul  ,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unrecognised Storage ID"
+                    );
 
-        EAPI_LIB_RETURN_SUCCESS(EApiStorageAreaRead, "");
-      }
-  }
-  EAPI_LIB_RETURN_ERROR(
-      EApiStorageAreaReadEmul  ,
-      EAPI_STATUS_UNSUPPORTED  ,
-      "Unrecognised Storage ID"
-      );
-EAPI_LIB_ASSERT_EXIT
+    /* find vendor specific block of Eeprom */
+    if (eeprom_userSpaceBuf == NULL || userspaceBuffer_Cmd == -1)
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageAreaReadEmul        ,
+                    EAPI_STATUS_UNSUPPORTED   ,
+                    "Unrecognised Storage for reading"
+                    );
 
-  return StatusCode;
+    /* validation: F0,?,?,11,AF,0,... */
+    if ((eeprom_userSpaceBuf [0] != 0xF0) ||
+            (eeprom_userSpaceBuf [3] != 0x11) ||
+            (eeprom_userSpaceBuf [4] != 0xAF) ||
+            (eeprom_userSpaceBuf [5] != 0x00))
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageAreaReadEmul        ,
+                    EAPI_STATUS_READ_ERROR   ,
+                    "Unrecognised Storage for reading"
+                    );
+
+    storageSize = eeprom_userSpaceBuf[1] << 8;
+    storageSize |= eeprom_userSpaceBuf[2];
+    storageSize = storageSize*2;
+    storageSize = storageSize - 6;
+
+    EAPI_LIB_RETURN_ERROR_IF(
+                EApiStorageAreaReadEmul                         ,
+                (Offset+ByteCnt)>storageSize  ,
+                EAPI_STATUS_INVALID_BLOCK_LENGTH                ,
+                "Read Len extends beyond End of Storage Area"
+                );
+
+    StatusCode = EApiI2CReadTransfer(eeprom_bus,EEPROM_DEVICE,EAPI_I2C_ENC_EXT_CMD(userspaceBuffer_Cmd+6+Offset), pvBuffer,ByteCnt,ByteCnt);
+    if(!EAPI_TEST_SUCCESS(StatusCode))
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageAreaReadEmul        ,
+                    EAPI_STATUS_READ_ERROR   ,
+                    "Reading User space Failed"
+                    );
+
+    EAPI_LIB_RETURN_SUCCESS(EApiStorageAreaRead, "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
 }
 
 EApiStatus_t 
 EApiStorageAreaWriteEmul(
-    __IN EApiId_t Id, 
-    __IN uint32_t Offset, 
-    __IN void *pvBuffer, 
-    __IN uint32_t ByteCnt
-    )
+        __IN EApiId_t Id,
+        __IN uint32_t Offset,
+        __IN uint8_t *pvBuffer,
+        __IN uint32_t ByteCnt
+        )
 {
-  EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-  StorageAreaMapping_t *pCurStorageDesc;
-  unsigned i;
-  for(
-      i=ARRAY_SIZE(StorageAreaTbl),
-      pCurStorageDesc=StorageAreaTbl;
-      i--;
-      pCurStorageDesc++)
-  {
-      if(pCurStorageDesc->Id==Id)
-      {
-        EAPI_LIB_RETURN_ERROR_IF(
-          EApiStorageAreaWriteEmul,
-          (ByteCnt%pCurStorageDesc->WBlockLength)       ,
-          EAPI_STATUS_INVALID_BLOCK_ALIGNMENT,
-          "Write length Not Aligned"
-          );
-        EAPI_LIB_RETURN_ERROR_IF(
-          EApiStorageAreaWriteEmul,
-          (Offset%pCurStorageDesc->WBlockLength)        ,
-          EAPI_STATUS_INVALID_BLOCK_ALIGNMENT,
-          "Write Base Address Not Aligned"
-          );
-        EAPI_LIB_RETURN_ERROR_IF(
-            EApiStorageAreaWriteEmul,
-            (Offset+ByteCnt)>pCurStorageDesc->StorageSize ,
-            EAPI_STATUS_INVALID_BLOCK_LENGTH,
-            "Write Len extends beyond End of Storage Area"
-            );
+    uint32_t storageSize = 0;
+    uint32_t new_Offset = 0;
+    uint32_t iWrite=0;
 
-#if 0
-        memcpy(pCurStorageDesc->pu8Buffer, pvBuffer+Offset, ByteCnt);
-#else
-        fseek(pCurStorageDesc->FStream, Offset, SEEK_SET);
-        fwrite(pvBuffer, sizeof(uint8_t), ByteCnt, pCurStorageDesc->FStream);
-#endif
-        EAPI_LIB_RETURN_SUCCESS(EApiStorageAreaWriteEmul, "");
-      }
-  }
-  EAPI_LIB_RETURN_ERROR(
-      EApiStorageAreaWrite,
-      EAPI_STATUS_UNSUPPORTED  ,
-      "Unrecognised Storage ID"
-      );
-EAPI_LIB_ASSERT_EXIT
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
 
-  return StatusCode;
+    if(Id != EAPI_ID_STORAGE_STD)
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageAreaWriteEmul  ,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unrecognised Storage ID"
+                    );
+
+    /* find vendor specific block of Eeprom */
+    if (eeprom_userSpaceBuf == NULL || userspaceBuffer_Cmd == -1)
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageAreaWriteEmul        ,
+                    EAPI_STATUS_READ_ERROR   ,
+                    "Unrecognised Storage for reading"
+                    );
+
+    /* validation: F0,?,?,AF,11,0,... */
+    if ((eeprom_userSpaceBuf [0] != 0xF0) ||
+            (eeprom_userSpaceBuf [3] != 0x11) ||
+            (eeprom_userSpaceBuf [4] != 0xAF) ||
+            (eeprom_userSpaceBuf [5] != 0x00))
+        EAPI_LIB_RETURN_ERROR(
+                    EApiStorageAreaWriteEmul        ,
+                    EAPI_STATUS_READ_ERROR   ,
+                    "Unrecognised Storage for reading"
+                    );
+
+            EAPI_LIB_RETURN_ERROR_IF(
+              EApiStorageAreaWriteEmul,
+              (ByteCnt%USERSPACE_BLOCKLENGTH)       ,
+              EAPI_STATUS_INVALID_BLOCK_ALIGNMENT,
+              "Write length Not Aligned"
+              );
+            EAPI_LIB_RETURN_ERROR_IF(
+              EApiStorageAreaWriteEmul,
+              (Offset%USERSPACE_BLOCKLENGTH)        ,
+              EAPI_STATUS_INVALID_BLOCK_ALIGNMENT,
+              "Write Base Address Not Aligned"
+              );
+
+    storageSize = eeprom_userSpaceBuf[1] << 8;
+    storageSize |= eeprom_userSpaceBuf[2];
+    storageSize = storageSize*2;
+    storageSize = storageSize - 6;
+
+    EAPI_LIB_RETURN_ERROR_IF(
+                EApiStorageAreaWriteEmul                         ,
+                (Offset+ByteCnt)>storageSize  ,
+                EAPI_STATUS_INVALID_BLOCK_LENGTH                ,
+                "Write Len extends beyond End of Storage Area"
+                );
+
+    new_Offset = userspaceBuffer_Cmd + 6 + Offset;
+    while(iWrite < ByteCnt)
+    {
+        StatusCode = EApiI2CWriteTransfer(eeprom_bus,EEPROM_DEVICE,EAPI_I2C_ENC_EXT_CMD(new_Offset), &pvBuffer[iWrite],1);
+        if(!EAPI_TEST_SUCCESS(StatusCode))
+            EAPI_LIB_RETURN_ERROR(
+                        EApiStorageAreaWriteEmul        ,
+                        EAPI_STATUS_WRITE_ERROR   ,
+                        "Writing into User space Failed"
+                        );
+        iWrite++;
+        new_Offset++;
+        usleep(5000);
+    }
+
+
+
+
+    EAPI_LIB_RETURN_SUCCESS(EApiStorageAreaWriteEmul, "");
+
+
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
 }
 
