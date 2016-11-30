@@ -399,7 +399,8 @@ EApiStatus_t fill_eepromBuffer(uint8_t block, uint8_t type)
                         second_byte = 0;
                         third_byte = 0;
                         forth_byte = 0;
-                        userspaceBuffer_Cmd = -1;
+                        if(block == VENDOR_SPECIFIC_BLOCK)
+                            userspaceBuffer_Cmd = -1;
 
                         Cmd = EAPI_I2C_ENC_EXT_CMD(length + iRead - 3);
                         iRead = length + iRead - 4;
