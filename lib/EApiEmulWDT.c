@@ -154,17 +154,17 @@ EApiStatus_t
 EAPI_CALLTYPE
 EApiWDogGetCapEmul(
         __OUTOPT uint32_t *pMaxDelay       ,/* Maximum Supported
-                                                 * Delay in milliseconds
-                                                 */
+                                                         * Delay in milliseconds
+                                                         */
         __OUTOPT uint32_t *pMaxEventTimeout,/* Maximum Supported
-                                                 * Event Timeout in
-                                                 * milliseconds
-                                                 * 0 == Unsupported
-                                                 */
+                                                         * Event Timeout in
+                                                         * milliseconds
+                                                         * 0 == Unsupported
+                                                         */
         __OUTOPT uint32_t *pMaxResetTimeout /* Maximum Supported
-                                                 * Reset Timeout in
-                                                 * milliseconds
-                                                 */
+                                                         * Reset Timeout in
+                                                         * milliseconds
+                                                         */
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
@@ -198,16 +198,17 @@ EApiStatus_t
 EApiWDogStartEmul(
         __IN  uint32_t Delay       , /* Delay in milliseconds */
         __IN  uint32_t EventTimeout, /* Event Timeout in
-                                          * milliseconds
-                                          */
+                                                  * milliseconds
+                                                  */
         __IN  uint32_t ResetTimeout  /* Reset Timeout in
-                                          * milliseconds
-                                          */
+                                                  * milliseconds
+                                                  */
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     char devname[100];
     int ret;
+    unsigned int flags;
 
     find_wdog_device();
     if (WatchdogFound == 0) // no WDG
@@ -265,6 +266,9 @@ EApiWDogStartEmul(
                       EAPI_STATUS_UNSUPPORTED,
                       "Delay time is not supported by the driver."
                       );
+
+    flags = WDIOS_DISABLECARD;
+    ioctl(wdogDescriptor, WDIOC_SETOPTIONS, &flags);
 
     /* set EventTimeOut */
     uint32_t EventTimeoutSec = SavedEventTimeoutSec;
@@ -332,10 +336,13 @@ EApiWDogStartEmul(
                           );
     }
 
+    flags = WDIOS_ENABLECARD;
+    ioctl(wdogDescriptor, WDIOC_SETOPTIONS, &flags);
+
     EAPI_LIB_RETURN_SUCCESS(EApiWDogStartEmul, "");
 
     EAPI_LIB_ASSERT_EXIT
-    return StatusCode;
+            return StatusCode;
 }
 
 EApiStatus_t 
