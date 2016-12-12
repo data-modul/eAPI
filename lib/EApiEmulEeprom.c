@@ -256,9 +256,8 @@ EApiStatus_t fill_eepromBuffer(uint8_t block, uint8_t type)
     int length = 0;
 
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-
     /* ******************** EEPROM ************************** */
-    if (eeprom_bus > 0) //means eeprom is available
+    if (eeprom_bus >= 0) //means eeprom is available
     {
         /* open device */
         snprintf(devname,sizeof(devname),"/dev/i2c/%d",eeprom_bus);

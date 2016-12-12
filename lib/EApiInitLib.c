@@ -44,7 +44,7 @@
 #include <EApiDmo.h>
 
 FILE *OutputStream=NULL;
-unsigned int eeprom_bus = 0;
+int eeprom_bus = -1;
 uint8_t *eeprom_userSpaceBuf = NULL;
 int board_type;
 char *hwname;
@@ -239,7 +239,8 @@ EApiStatus_t list_gpio_device()
             }
             else
             {
-                if (!strncmp(cinfo.label, "dmec-gpio.1", sizeof("dmec-gpio.1"))) /* dmec gpio found */
+             //   if (!strncmp(cinfo.label, "dmec-gpio.1", sizeof("dmec-gpio.1"))) /* dmec gpio found */
+                    if (strstr(cinfo.label, "dmec") != NULL)
                 {
                     gpioName = (char*)malloc(sizeof(cinfo.name)*sizeof(char));
                     strncpy(gpioName, cinfo.name,sizeof(cinfo.name));
