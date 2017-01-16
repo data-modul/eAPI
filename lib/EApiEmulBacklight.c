@@ -59,6 +59,63 @@
 
 #define BACKLIGHT_PATH "/sys/class/backlight/intel_backlight"
 
+int calculateSetBacklightInRange(int input)
+{
+    char path[NAME_MAX];
+    FILE *f = NULL;
+    uint32_t maxBrightness = 0;
+    u_int32_t divider = 0 ;
+    u_int32_t value = 0;
+
+    snprintf(path,sizeof(BACKLIGHT_PATH)+sizeof("/max_brightness"),BACKLIGHT_PATH"/max_brightness");
+    f = fopen(path, "r");
+    if (f != NULL)
+    {
+        int res = fscanf(f, "%" PRIu32, &maxBrightness);
+        if (res < 0)
+            maxBrightness = 0;
+        fclose(f);
+    }
+
+    divider = maxBrightness / EAPI_BACKLIGHT_SET_BRIGHTEST;
+    if (divider == 0)
+    {
+        value = input;
+    }
+    else
+        value = input * divider;
+
+    return value;
+}
+int calculateGetBacklightInRange(int input)
+{
+    char path[NAME_MAX];
+    FILE *f = NULL;
+    uint32_t maxBrightness = 0;
+    u_int32_t divider = 0 ;
+    u_int32_t value = 0;
+
+    snprintf(path,sizeof(BACKLIGHT_PATH)+sizeof("/max_brightness"),BACKLIGHT_PATH"/max_brightness");
+    f = fopen(path, "r");
+    if (f != NULL)
+    {
+        int res = fscanf(f, "%" PRIu32, &maxBrightness);
+        if (res < 0)
+            maxBrightness = 0;
+        fclose(f);
+    }
+
+    divider = maxBrightness / EAPI_BACKLIGHT_SET_BRIGHTEST;
+    if (divider == 0)
+    {
+        value = input;
+    }
+    else
+        value = input / divider;
+
+    return value;
+}
+
 EApiStatus_t 
 EApiVgaGetBacklightEnableEmul( 
         __IN  EApiId_t Id       ,
@@ -126,11 +183,11 @@ EApiVgaSetBacklightEnableEmul(
     {
         if ((Enable == EAPI_BACKLIGHT_SET_ON) ||
                 (Enable == EAPI_BACKLIGHT_SET_OFF))
-        EAPI_LIB_RETURN_ERROR(
-                    EApiVgaSetBacklightEnableEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Not support enable/disable backlight"
-                    );
+            EAPI_LIB_RETURN_ERROR(
+                        EApiVgaSetBacklightEnableEmul,
+                        EAPI_STATUS_UNSUPPORTED  ,
+                        "Not support enable/disable backlight"
+                        );
     }
     EAPI_LIB_RETURN_ERROR(
                 EApiVgaSetBacklightEnableEmul,
@@ -177,7 +234,8 @@ EApiVgaGetBacklightBrightnessEmul(
                         EAPI_STATUS_ERROR  ,
                         err);
         }
-        *pBrightness=value;
+        *pBrightness = calculateGetBacklightInRange(value);
+     //   *pBrightness=value;
         EAPI_LIB_RETURN_SUCCESS(
                     EApiVgaGetBacklightBrightnessEmul,
                     ""
@@ -202,31 +260,34 @@ EApiVgaSetBacklightBrightnessEmul(
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     char path[NAME_MAX];
     FILE *f = NULL;
-    uint32_t maxBrightness = 0;
+   // uint32_t maxBrightness = 0;
+    uint32_t newBrightness;
 
     if (Id == EAPI_ID_BACKLIGHT_1) /* card0-eDP-1 */
     {
-        snprintf(path,sizeof(BACKLIGHT_PATH)+sizeof("/max_brightness"),BACKLIGHT_PATH"/max_brightness");
-        f = fopen(path, "r");
-        if (f != NULL)
-        {
-            int res = fscanf(f, "%" PRIu32, &maxBrightness);
-            if (res < 0)
-                maxBrightness = 0;
-            fclose(f);
-        }
+//        snprintf(path,sizeof(BACKLIGHT_PATH)+sizeof("/max_brightness"),BACKLIGHT_PATH"/max_brightness");
+//        f = fopen(path, "r");
+//        if (f != NULL)
+//        {
+//            int res = fscanf(f, "%" PRIu32, &maxBrightness);
+//            if (res < 0)
+//                maxBrightness = 0;
+//            fclose(f);
+//        }
 
-        if (Brightness > maxBrightness)
+        if (Brightness > EAPI_BACKLIGHT_SET_BRIGHTEST)
             EAPI_LIB_RETURN_ERROR(
                         EApiVgaSetBacklightBrightness,
                         EAPI_STATUS_ERROR  ,
                         "Brightness Invalid Value");
 
+        newBrightness = calculateSetBacklightInRange(Brightness);
+
         snprintf(path,sizeof(BACKLIGHT_PATH)+sizeof("/brightness"),BACKLIGHT_PATH"/brightness");
         f = fopen(path, "w");
         if (f != NULL)
         {
-            int res = fprintf(f, "%" PRIu32, Brightness);
+            int res = fprintf(f, "%" PRIu32, newBrightness);
             if (res < 0)
             {
                 snprintf(err,sizeof(err),"Error during write operation: %s",strerror(errno));

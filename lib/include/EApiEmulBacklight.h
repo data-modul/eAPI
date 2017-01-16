@@ -63,6 +63,8 @@ EApiVgaSetBacklightBrightnessEmul(
     __OUT uint32_t Brightness
     );
 
+int calculateGetBacklightInRange(int input);
+int calculateSetBacklightInRange(int input);
 
 #ifdef __cplusplus
 }
