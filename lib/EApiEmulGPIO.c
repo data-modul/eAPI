@@ -588,9 +588,9 @@ EApiGPIOSetDirectionEmul(
         else
         {
             req[index].flags = GPIOHANDLE_REQUEST_OUTPUT;
-           // req[index].default_values[0] = 0;
+            req[index].default_values[0] = 0;
         }
-        req[index].default_values[0] = 0;
+      //  req[index].default_values[0] = 0;
 
         ret = ioctl(gpiofd, GPIO_GET_LINEHANDLE_IOCTL, &req[index]);
          if(ret == -1 || req[index].fd <= 0)
@@ -613,15 +613,16 @@ EApiGPIOSetDirectionEmul(
                      close(req[i].fd);
                 req[i].lineoffsets[0] = i;
                 req[i].lines = 1;
+
                 if(Direction & (0x01 << i))
                     req[i].flags = GPIOHANDLE_REQUEST_INPUT;
                 else
                 {
                     req[i].flags = GPIOHANDLE_REQUEST_OUTPUT;
-                   // req[i].default_values[0] = 0;
+                    req[i].default_values[0] = 0;
                 }
 
-                 req[i].default_values[0] = 0;
+                 //req[i].default_values[0] = 0;
 
                 ret = ioctl(gpiofd, GPIO_GET_LINEHANDLE_IOCTL, &req[i]);
                 if(ret == -1 || req[i].fd <= 0)
