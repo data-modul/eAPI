@@ -397,6 +397,7 @@ EApiI2CWriteReadEmul(
                     "Device Read Error"
                     );
 
+        LpRBuffer[iRead]= '\0';
         pRBuffer = LpRBuffer;
 
         EAPI_LIB_RETURN_SUCCESS(EApiI2CWriteReadEmul, "");
