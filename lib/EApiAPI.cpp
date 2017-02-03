@@ -88,10 +88,10 @@ EApiI2CWriteReadRawSpecific(
         __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
                                            * Device Address
                                            */
-        __INOPT  uint8_t     *pWBuffer , /* Write Data pBuffer */
+        __INOPT  void     *pWBuffer , /* Write Data pBuffer */
         __IN     uint32_t  WriteBCnt, /* Number of Bytes to write */
          __IN     uint32_t  CmdBCnt, /* Number of Cmd Bytes to write */
-        __OUTOPT uint8_t     *pRBuffer , /* Read Data pBuffer */
+        __OUTOPT void     *pRBuffer , /* Read Data pBuffer */
         __IN     uint32_t  RBufLen  , /* Data pBuffer Length */
         __IN     uint32_t  ReadBCnt   /* Number of Bytes to
                                            * Read
@@ -170,11 +170,11 @@ EApiI2CWriteReadRaw(
         __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
                                            * Device Address
                                            */
-        __INOPT  uint8_t     *pWBuffer , /* Write Data pBuffer */
+        __INOPT  void     *pWBuffer , /* Write Data pBuffer */
         __IN     uint32_t  WriteBCnt, /* Number of Bytes to
                                            * write
                                            */
-        __OUTOPT uint8_t     *pRBuffer , /* Read Data pBuffer */
+        __OUTOPT void     *pRBuffer , /* Read Data pBuffer */
         __IN     uint32_t  RBufLen  , /* Data pBuffer Length */
         __IN     uint32_t  ReadBCnt   /* Number of Bytes to
                                            * Read
@@ -254,7 +254,7 @@ EApiI2CReadTransfer(
                                        * Device Address
                                        */
         __IN  uint32_t  Cmd     , /* I2C Command/Offset */
-        __OUT uint8_t *pBuffer , /* Transfer Data pBuffer */
+        __OUT void *pBuffer , /* Transfer Data pBuffer */
         __IN  uint32_t  BufLen  , /* Data pBuffer Length */
         __IN  uint32_t  ByteCnt   /* Byte Count to read */
         )
@@ -340,7 +340,7 @@ EApiI2CWriteTransfer(
                                        * Device Address
                                        */
         __IN  uint32_t  Cmd     , /* I2C Command/Offset */
-        __IN  uint8_t *pBuffer , /* Transfer Data pBuffer */
+        __IN  void *pBuffer , /* Transfer Data pBuffer */
         __IN  uint32_t  ByteCnt   /* Byte Count to write */
         )
 {
