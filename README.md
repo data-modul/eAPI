@@ -1,5 +1,6 @@
 EAPI library provides common API for different DMO CPU modules. This provides
-no necessary software modifications when DMO CPU  module is changed. 
+no necessary software modifications in user developed applications when DMO CPU
+module is changed. 
 
 About EAPI library
 
