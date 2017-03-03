@@ -27,9 +27,11 @@ extern char *hwname;
 
 extern char err[256];
 
-extern struct gpiohandle_request *req;
 extern unsigned int gpioLines;
-extern int gpiofd;
+extern unsigned int gpioBase;
+extern int *gpiofdExpert ;
+extern int *gpiofdValue ;
+extern int *gpiofdDirection ;
 extern int gpioEnabled;
 
 

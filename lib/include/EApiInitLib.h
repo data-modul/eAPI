@@ -60,7 +60,7 @@ uint32_t
 EApiUninitLib();
 EApiStatus_t find_hwmon();
 EApiStatus_t list_gpio_device();
-EApiStatus_t gpio_dev_open(const char *device_name);
+EApiStatus_t gpio_files_create(void);
 
 
 #ifndef EAPI_LIB_MSG_OUT

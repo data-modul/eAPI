@@ -40,7 +40,6 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <stdlib.h>
-#include <linux/gpio.h>
 #include <sys/ioctl.h>
 #include <fcntl.h>
 
@@ -58,6 +57,29 @@
 #define pInputsGPIO 0xff
 #define pOutputsGPIO 0xff
 
+#define GPIO_PATH "/sys/class/gpio/"
+
+
+EApiStatus_t pin_export (int mypin) {
+    char buf[32];
+    int fd;
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+
+    if ((fd = open(GPIO_PATH"/export", O_WRONLY)) < 0) {
+        snprintf(err,sizeof(err),"Failed to access to pin %d",mypin);
+        EAPI_LIB_RETURN_ERROR(
+                    pin_export,
+                    EAPI_STATUS_ERROR,
+                    err);
+    }
+    snprintf(buf, sizeof(buf), "%d", gpioBase + mypin);
+    write(fd, buf, strlen(buf));
+    close(fd);
+    gpiofdExpert[mypin] = 0;
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
+}
+
 EApiStatus_t 
 EApiGPIOGetLevelEmul( 
         __IN  EApiId_t  Id      ,
@@ -67,10 +89,11 @@ EApiGPIOGetLevelEmul(
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
 
-    int ret;
+    int ret, fd;
     unsigned int i;
     int index = -1;
     int bank = 0;
+    char path[NAME_MAX];
 
     *pLevel = 0;
 
@@ -128,28 +151,33 @@ EApiGPIOGetLevelEmul(
 
     if (bank == 0 && index > -1) // individual request
     {
-        if(req[index].fd <= 0)
+        if(gpiofdExpert[index] == -1)
+            pin_export(index);
+
+        if (gpiofdValue[index] == -1) /* value file is not opened yet */
         {
-            snprintf(err,sizeof(err),"Failed to access to pin %d",index);
+            sprintf(path, GPIO_PATH"gpio%d/value", gpioBase+index );
+            if ((fd = open(path, O_RDWR )) < 0) {
+                snprintf(err,sizeof(err),"Failed to open GPIO %d value: %s",index,strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiGPIOGetLevelEmul,
+                            EAPI_STATUS_ERROR,
+                            err);
+            }
+            gpiofdValue[index] = fd;
+        }
+        char s;
+        lseek(gpiofdValue[index],0, SEEK_SET);
+        ret = read(gpiofdValue[index], &s, 1);
+        if(ret == -1)
+        {
+            snprintf(err,sizeof(err),"Failed to read GPIO %d value: %s",index,strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiGPIOGetLevelEmul,
                         EAPI_STATUS_ERROR,
                         err);
         }
-
-        struct gpiohandle_data data;
-        memset(&data, 0, sizeof(data));
-
-        ret = ioctl(req[index].fd, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &data);
-        if(ret == -1)
-        {
-            snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE GET LINE VALUES IOCTL %d: %s",index,strerror(errno));
-            EAPI_LIB_RETURN_ERROR(
-                        EApiGPIOGetLevelEmul,
-                        EAPI_STATUS_UNSUPPORTED,
-                        err);
-        }
-        *pLevel = data.values[0];
+        *pLevel = s - '0';
     }
     else // bank request
     {
@@ -157,27 +185,34 @@ EApiGPIOGetLevelEmul(
         {
             if (BitMask & (0x01 << i)) /* Bitmask is EAPI_GPIO_BITMASK_SELECT*/
             {
-                if(req[i].fd <= 0)
-                {
-                    snprintf(err,sizeof(err),"Failed to access to pin %d",i);
-                    EAPI_LIB_RETURN_ERROR(
-                                EApiGPIOGetLevelEmul,
-                                EAPI_STATUS_ERROR,
-                                err);
-                }
+                if(gpiofdExpert[i] == -1)
+                    pin_export(i);
 
-                struct gpiohandle_data data;
-                memset(&data, 0, sizeof(data));
-                ret = ioctl(req[i].fd, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &data);
+                if (gpiofdValue[i] == -1) /* value file is not opened yet */
+                {
+                    sprintf(path, GPIO_PATH"gpio%d/value", gpioBase+i );
+                    if ((fd = open(path, O_RDWR )) < 0) {
+                        snprintf(err,sizeof(err),"Failed to open GPIO %d value: %s",i,strerror(errno));
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiGPIOGetLevelEmul,
+                                    EAPI_STATUS_ERROR,
+                                    err);
+                    }
+                    gpiofdValue[i] = fd;
+
+                }
+                char s;
+                lseek(gpiofdValue[i],0, SEEK_SET);
+                ret = read(gpiofdValue[i], &s, 1);
                 if(ret == -1)
                 {
-                    snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE GET LINE VALUES of pin %d: %s",i,strerror(errno));
+                    snprintf(err,sizeof(err),"Failed to read GPIO %d value: %s",i,strerror(errno));
                     EAPI_LIB_RETURN_ERROR(
                                 EApiGPIOGetLevelEmul,
                                 EAPI_STATUS_ERROR,
                                 err);
                 }
-                *pLevel |= (data.values[0] << i);
+                *pLevel |= ((s - '0') << i);
             }
         }
     }
@@ -197,11 +232,11 @@ EApiGPIOSetLevelEmul(
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
 
     unsigned int i = 0;
-    struct gpiohandle_data data;//, readBack;
-    int ret = 0;
+    int ret,fd = 0;
     int index = -1;
     int bank = 0;
     uint32_t Direction = 0;
+    char path[NAME_MAX];
 
     if (gpioEnabled == 0)
     {
@@ -211,10 +246,6 @@ EApiGPIOSetLevelEmul(
                     "Unrecognised GPIO chip"
                     );
     }
-
-    memset(&data, 0, sizeof(data));
-    // memset(&readBack, 0, sizeof(readBack));
-
     switch (Id)
     {
     case EAPI_ID_GPIO_GPIO00:
@@ -269,32 +300,35 @@ EApiGPIOSetLevelEmul(
                         EAPI_STATUS_INVALID_PARAMETER,
                         "Cant Set Level on Pin that is set to input");
 
-        if(req[index].fd <= 0)
-        {
-            snprintf(err,sizeof(err),"Failed to access to pin %d",index);
-            EAPI_LIB_RETURN_ERROR(
-                        EApiGPIOSetLevelEmul,
-                        EAPI_STATUS_ERROR,
-                        err);
-        }
-        else
-        {
-            memset(&data, 0, sizeof(data));
+        if(gpiofdExpert[index] == -1)
+            pin_export(index);
 
-            if (Level)
-                data.values[0] = EAPI_GPIO_HIGH;
-            else
-                data.values[0] = EAPI_GPIO_LOW;
-            /* set requested GPIO level*/
-            ret = ioctl(req[index].fd, GPIOHANDLE_SET_LINE_VALUES_IOCTL, &data);
-            if(ret == -1)
-            {
-                snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE SET LINE VALUES IOCTL %d: %s",index,strerror(errno));
+        if (gpiofdValue[index] == -1) /* value file is not opened yet */
+        {
+            sprintf(path, GPIO_PATH"gpio%d/value", gpioBase+index );
+            if ((fd = open(path, O_RDWR )) < 0) {
+                snprintf(err,sizeof(err),"Failed to open GPIO %d value: %s",index,strerror(errno));
                 EAPI_LIB_RETURN_ERROR(
                             EApiGPIOSetLevelEmul,
                             EAPI_STATUS_ERROR,
                             err);
             }
+            gpiofdValue[index] = fd;
+        }
+
+        lseek(gpiofdValue[index],0, SEEK_SET);
+        if (Level)
+            ret = write(gpiofdValue[index], "1", 1);
+        else
+            ret = write(gpiofdValue[index], "0", 1);
+
+        if(ret == -1)
+        {
+            snprintf(err,sizeof(err),"Failed to write value to GPIO %d: %s",index,strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        EApiGPIOSetLevelEmul,
+                        EAPI_STATUS_ERROR,
+                        err);
         }
     }
     else /* bank request */
@@ -305,30 +339,35 @@ EApiGPIOSetLevelEmul(
                         EAPI_STATUS_INVALID_PARAMETER,
                         "Cant Set Level on Pin that is set to input");
 
-        for (i = 0 ; i < gpioLines ; i++)
+        for (i = 0 ; i < gpioLines ;i++)
         {
             if (BitMask & (0x01 << i)) /* Bitmask is EAPI_GPIO_BITMASK_SELECT*/
             {
-                if(req[i].fd <= 0)
+                if(gpiofdExpert[i] == -1)
+                    pin_export(i);
+
+                if (gpiofdValue[i] == -1) /* value file is not opened yet */
                 {
-                    snprintf(err,sizeof(err),"Failed to access to pin %d",i);
-                    EAPI_LIB_RETURN_ERROR(
-                                EApiGPIOSetLevelEmul,
-                                EAPI_STATUS_ERROR,
-                                err);
+                    sprintf(path, GPIO_PATH"gpio%d/value", gpioBase+i );
+                    if ((fd = open(path, O_RDWR )) < 0) {
+                        snprintf(err,sizeof(err),"Failed to open GPIO %d value: %s",i,strerror(errno));
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiGPIOSetLevelEmul,
+                                    EAPI_STATUS_ERROR,
+                                    err);
+                    }
+                    gpiofdValue[i] = fd;
                 }
 
-                memset(&data, 0, sizeof(data));
-
+                lseek(gpiofdValue[i],0, SEEK_SET);
                 if(Level & (0x01 << i))
-                    data.values[0] = EAPI_GPIO_HIGH;
+                    ret = write(gpiofdValue[i], "1", 1);
                 else
-                    data.values[0] = EAPI_GPIO_LOW;
+                    ret = write(gpiofdValue[i], "0", 1);
 
-                ret = ioctl(req[i].fd, GPIOHANDLE_SET_LINE_VALUES_IOCTL, &data);
                 if(ret == -1)
                 {
-                    snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE GET LINE VALUES of pin %d: %s",i,strerror(errno));
+                    snprintf(err,sizeof(err),"Failed to write value to GPIO %d: %s",i,strerror(errno));
                     EAPI_LIB_RETURN_ERROR(
                                 EApiGPIOSetLevelEmul,
                                 EAPI_STATUS_ERROR,
@@ -337,31 +376,6 @@ EApiGPIOSetLevelEmul(
             }
         }
     }
-
-    /* read back GPIO level*/
-    //        ret = ioctl(req.fd, GPIOHANDLE_GET_LINE_VALUES_IOCTL, &readBack);
-    //        if(ret == -1)
-    //        {
-    //             printf("debug_4\n");
-    //            snprintf(err,sizeof(err),"Failed to issue GPIOHANDLE GET LINE VALUES IOCTL: %s",strerror(errno));
-    //            EAPI_LIB_RETURN_ERROR(
-    //                        EApiGPIOSetLevelEmul,
-    //                        EAPI_STATUS_ERROR,
-    //                        err);
-    //        }
-    //        for(i=0; i< req.lines; i++)
-    //        {
-    //            if(data.values[i] != readBack.values[i])
-    //            {
-    //                 printf("debug_5\n");
-    //                snprintf(err,sizeof(err),"Failed to SET GPIO LINE VALUES IOCTL as requested");
-    //                EAPI_LIB_RETURN_ERROR(
-    //                            EApiGPIOSetLevelEmul,
-    //                            EAPI_STATUS_ERROR,
-    //                            err);
-    //            }
-    //        }
-
 
     EAPI_LIB_RETURN_SUCCESS(EApiGPIOSetLevel, "");
 
@@ -380,7 +394,8 @@ EApiGPIOGetDirectionEmul(
     int index = -1;
     int bank = 0;
     unsigned i;
-    int ret;
+    int ret, fd;
+    char path[NAME_MAX];
 
     *pDirection = 0;
 
@@ -438,26 +453,39 @@ EApiGPIOGetDirectionEmul(
 
     if (bank == 0 && index > -1) /* individual request */
     {
-        struct gpioline_info linfo;
-        memset(&linfo, 0, sizeof(linfo));
 
-        linfo.line_offset = index;
-        ret = ioctl(gpiofd, GPIO_GET_LINEINFO_IOCTL, &linfo);
-        if (ret == -1)
+        if(gpiofdExpert[index] == -1)
+            pin_export(index);
+
+        if (gpiofdDirection[index] == -1) /* direction file is not opened yet */
         {
-            snprintf(err,sizeof(err),"Failed to issue lineinfo ioctl %d: %s",index,strerror(errno));
+            sprintf(path, GPIO_PATH"gpio%d/direction", gpioBase+index );
+            if ((fd = open(path, O_RDWR )) < 0) {
+                snprintf(err,sizeof(err),"Failed to open GPIO %d direction: %s",index,strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiGPIOGetDirectionEmul,
+                            EAPI_STATUS_ERROR,
+                            err);
+            }
+            gpiofdDirection[index] = fd;
+        }
+
+        char s[3];
+        lseek(gpiofdDirection[index],0, SEEK_SET);
+        ret = read(gpiofdDirection[index], s, 3);
+        if(ret == -1)
+        {
+            snprintf(err,sizeof(err),"Failed to read GPIO %d direction: %s",index,strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiGPIOGetDirectionEmul,
                         EAPI_STATUS_ERROR,
                         err);
         }
+        if(!strncmp(s,"out",3))
+            *pDirection = EAPI_GPIO_OUTPUT;
         else
-        {
-            if((linfo.flags & GPIOLINE_FLAG_IS_OUT) == GPIOLINE_FLAG_IS_OUT)
-                *pDirection = EAPI_GPIO_OUTPUT;
-            else
-                *pDirection = EAPI_GPIO_INPUT;
-        }
+            *pDirection = EAPI_GPIO_INPUT;
+
     }
     else /* bank request */
     {
@@ -466,26 +494,36 @@ EApiGPIOGetDirectionEmul(
             unsigned bit = BitMask & ( 0x01 << i);
             if (bit != 0x00) /* Bitmask is EAPI_GPIO_BITMASK_SELECT*/
             {
-                struct gpioline_info linfo;
-                memset(&linfo, 0, sizeof(linfo));
+                if(gpiofdExpert[i] == -1)
+                    pin_export(i);
 
-                linfo.line_offset = i;
-                ret = ioctl(gpiofd, GPIO_GET_LINEINFO_IOCTL, &linfo);
-                if (ret == -1)
+                if (gpiofdDirection[i] == -1) /* direction file is not opened yet */
                 {
-                    snprintf(err,sizeof(err),"Failed to issue lineinfo ioctl %d: %s",i,strerror(errno));
+                    sprintf(path, GPIO_PATH"gpio%d/direction", gpioBase+i );
+                    if ((fd = open(path, O_RDWR )) < 0) {
+                        snprintf(err,sizeof(err),"Failed to open GPIO %d direction: %s",i,strerror(errno));
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiGPIOGetDirectionEmul,
+                                    EAPI_STATUS_ERROR,
+                                    err);
+                    }
+                    gpiofdDirection[i] = fd;
+                }
+                char s[3];
+                lseek(gpiofdDirection[i],0, SEEK_SET);
+                ret = read(gpiofdDirection[i], s, 3);
+                if(ret == -1)
+                {
+                    snprintf(err,sizeof(err),"Failed to read GPIO %d direction: %s",i,strerror(errno));
                     EAPI_LIB_RETURN_ERROR(
                                 EApiGPIOGetDirectionEmul,
                                 EAPI_STATUS_ERROR,
                                 err);
                 }
+                if(!strncmp(s,"out",3))
+                    *pDirection |= (EAPI_GPIO_OUTPUT << i);
                 else
-                {
-                    if((linfo.flags & GPIOLINE_FLAG_IS_OUT) == GPIOLINE_FLAG_IS_OUT)
-                        *pDirection |= (EAPI_GPIO_OUTPUT << i);
-                    else
-                        *pDirection |= (EAPI_GPIO_INPUT << i );
-                }
+                    *pDirection |= (EAPI_GPIO_INPUT << i );
             }
         }
     }
@@ -508,7 +546,8 @@ EApiGPIOSetDirectionEmul(
     int index = -1;
     int bank = 0;
     unsigned i;
-    int ret;
+    int ret,fd;
+    char path[NAME_MAX];
 
     if (gpioEnabled == 0)
     {
@@ -577,25 +616,31 @@ EApiGPIOSetDirectionEmul(
 
     if (bank == 0 && index > -1) /* individual request */
     {
-        if(req[index].fd > 0)
-            close(req[index].fd);
+        if(gpiofdExpert[index] == -1)
+            pin_export(index);
 
-        req[index].lineoffsets[0] = index;
-        req[index].lines = 1;
-
-        if (Direction) /* EAPI_GPIO_INPUT */
-            req[index].flags = GPIOHANDLE_REQUEST_INPUT;
-        else
+        if (gpiofdDirection[index] == -1) /* direction file is not opened yet */
         {
-            req[index].flags = GPIOHANDLE_REQUEST_OUTPUT;
-            req[index].default_values[0] = 0;
+            sprintf(path, GPIO_PATH"gpio%d/direction", gpioBase+index );
+            if ((fd = open(path, O_RDWR )) < 0) {
+                snprintf(err,sizeof(err),"Failed to open GPIO %d direction: %s",index,strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiGPIOSetDirectionEmul,
+                            EAPI_STATUS_ERROR,
+                            err);
+            }
+            gpiofdDirection[index] = fd;
         }
-      //  req[index].default_values[0] = 0;
 
-        ret = ioctl(gpiofd, GPIO_GET_LINEHANDLE_IOCTL, &req[index]);
-         if(ret == -1 || req[index].fd <= 0)
+        lseek(gpiofdDirection[index],0, SEEK_SET);
+        if (Direction) /* EAPI_GPIO_INPUT */
+            ret = write(gpiofdDirection[index], "in", 2);
+        else
+            ret = write(gpiofdDirection[index], "out", 3);
+
+        if(ret == -1)
         {
-            snprintf(err,sizeof(err),"Failed to issue GET LINEHANDLE IOCTL %d: %s",index,strerror(errno));
+            snprintf(err,sizeof(err),"Failed to write direction to GPIO %d: %s",index,strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiGPIOSetDirectionEmul,
                         EAPI_STATUS_ERROR,
@@ -609,25 +654,31 @@ EApiGPIOSetDirectionEmul(
             unsigned bit = BitMask & (0x01 << i);
             if (bit != 0x00) /* Bitmask is EAPI_GPIO_BITMASK_SELECT */
             {
-                 if(req[i].fd > 0)
-                     close(req[i].fd);
-                req[i].lineoffsets[0] = i;
-                req[i].lines = 1;
+                if(gpiofdExpert[i] == -1)
+                    pin_export(i);
 
-                if(Direction & (0x01 << i))
-                    req[i].flags = GPIOHANDLE_REQUEST_INPUT;
-                else
+                if (gpiofdDirection[i] == -1) /* direction file is not opened yet */
                 {
-                    req[i].flags = GPIOHANDLE_REQUEST_OUTPUT;
-                    req[i].default_values[0] = 0;
+                    sprintf(path, GPIO_PATH"gpio%d/direction", gpioBase+i );
+                    if ((fd = open(path, O_RDWR )) < 0) {
+                        snprintf(err,sizeof(err),"Failed to open GPIO %d direction: %s",i,strerror(errno));
+                        EAPI_LIB_RETURN_ERROR(
+                                    EApiGPIOSetDirectionEmul,
+                                    EAPI_STATUS_ERROR,
+                                    err);
+                    }
+                    gpiofdDirection[i] = fd;
                 }
 
-                 //req[i].default_values[0] = 0;
+                lseek(gpiofdDirection[i],0, SEEK_SET);
+                if(Direction & (0x01 << i)) /* EAPI_GPIO_INPUT */
+                    ret = write(gpiofdDirection[i], "in", 2);
+                else
+                    ret = write(gpiofdDirection[i], "out", 3);
 
-                ret = ioctl(gpiofd, GPIO_GET_LINEHANDLE_IOCTL, &req[i]);
-                if(ret == -1 || req[i].fd <= 0)
+                if(ret == -1)
                 {
-                    snprintf(err,sizeof(err),"Failed to issue GET LINEHANDLE IOCTL %d: %s",i,strerror(errno));
+                    snprintf(err,sizeof(err),"Failed to write direction to GPIO %d: %s",i,strerror(errno));
                     EAPI_LIB_RETURN_ERROR(
                                 EApiGPIOSetDirectionEmul,
                                 EAPI_STATUS_ERROR,
@@ -664,14 +715,14 @@ EApiGPIOGetDirectionCapsEmul(
     }
 
     if((Id != EAPI_ID_GPIO_GPIO00) &&
-       (Id != EAPI_ID_GPIO_GPIO01) &&
-       (Id != EAPI_ID_GPIO_GPIO02) &&
-       (Id != EAPI_ID_GPIO_GPIO03) &&
-       (Id != EAPI_ID_GPIO_GPIO04) &&
-       (Id != EAPI_ID_GPIO_GPIO05) &&
-       (Id != EAPI_ID_GPIO_GPIO06) &&
-       (Id != EAPI_ID_GPIO_GPIO07) &&
-       (Id != EAPI_ID_GPIO_BANK00))
+            (Id != EAPI_ID_GPIO_GPIO01) &&
+            (Id != EAPI_ID_GPIO_GPIO02) &&
+            (Id != EAPI_ID_GPIO_GPIO03) &&
+            (Id != EAPI_ID_GPIO_GPIO04) &&
+            (Id != EAPI_ID_GPIO_GPIO05) &&
+            (Id != EAPI_ID_GPIO_GPIO06) &&
+            (Id != EAPI_ID_GPIO_GPIO07) &&
+            (Id != EAPI_ID_GPIO_BANK00))
     {
         *pInputs=0x00;
         *pOutputs=0x00;
