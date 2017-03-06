@@ -122,7 +122,17 @@ EApiStatus_t find_hwmon()
                         err);
         }
         px = fgets(s, NAME_MAX, f);
-        fclose(f);
+        int retclose = fclose(f);
+	if (retclose != 0 )
+	{
+		hwname = NULL;
+            closedir(dir);
+            snprintf(err,sizeof(err),"%s",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        find_hwmon,
+                        EAPI_STATUS_UNSUPPORTED,
+                        err);
+	}
         if (!px) {
             fprintf(stderr, "%s: read error\n", n);
             continue;
@@ -170,6 +180,7 @@ EApiStatus_t list_gpio_device()
     char chrdev_name[NAME_MAX],s[NAME_MAX];
     FILE* fd;
     char *px;
+    int retclose = 0;
 
     gpioLines = 0;
     gpioBase = 0;
@@ -213,7 +224,13 @@ EApiStatus_t list_gpio_device()
             {
                 if (strstr(s, "dmec") != NULL)
                 {
-                    fclose(fd);
+                    retclose = fclose(fd);
+		    if (retclose != 0)
+		    {
+		    snprintf(err,sizeof(err),"Failed to close %s: %s",chrdev_name,strerror(errno));
+                        EAPI_FORMATED_MES('E',list_gpio_device,EAPI_STATUS_UNSUPPORTED,err);
+		    }
+
                     sprintf(chrdev_name, "/sys/class/gpio/%s/ngpio", de->d_name);
                     fd = fopen(chrdev_name,"r");
                     if(fd == NULL) {
@@ -251,12 +268,21 @@ EApiStatus_t list_gpio_device()
                     }
                     gpioBase = atoi(s);
                     gpioEnabled = 1;
-                    fclose(fd);
-
+                    retclose = fclose(fd);
+		    if (retclose != 0)
+		    {
+		    snprintf(err,sizeof(err),"Failed to close %s: %s",chrdev_name,strerror(errno));
+                        EAPI_FORMATED_MES('E',list_gpio_device,EAPI_STATUS_UNSUPPORTED,err);
+		    }
                     break;
                 }
             }
-            fclose(fd);
+            retclose = fclose(fd);
+	    if (retclose != 0)
+	    {
+		    snprintf(err,sizeof(err),"Failed to close %s: %s",chrdev_name,strerror(errno));
+                        EAPI_FORMATED_MES('E',list_gpio_device,EAPI_STATUS_UNSUPPORTED,err);
+	    }
         }
         else
             continue;
@@ -358,7 +384,6 @@ EApiInitLib(){
     if (f != NULL)
     {
         char* res = fgets(line, sizeof(line), f);
-        fclose(f);
         if (res == NULL)
         {
             EAPI_FORMATED_MES('E',
@@ -374,6 +399,15 @@ EApiInitLib(){
             else if(!strncmp(line,"eDM-COMB-BW6",12))
                 board_type = BBW6;
         }
+	int retclose = fclose(f);
+	if (retclose != 0 )
+	{
+		EAPI_FORMATED_MES('E',
+                              EApiInitLib,
+                              EAPI_STATUS_UNSUPPORTED,
+                              "error in closeing file dmi/id/board_name"
+                              );
+	}
     }
     else
     {

@@ -136,13 +136,25 @@ EApiVgaGetBacklightEnableEmul(
             int res = fscanf(f, "%s", value);
             if (res < 0)
             {
+		    fclose(f);
                 snprintf(err,sizeof(err),"Error during read operation: %s",strerror(errno));
                 EAPI_LIB_RETURN_ERROR(
                             EApiVgaGetBacklightEnableEmul,
                             EAPI_STATUS_ERROR  ,
                             err);
             }
-            fclose(f);
+	    else
+	    {
+            int retclose = fclose(f);
+	    if (retclose != 0 )
+	    {
+		    snprintf(err,sizeof(err),"Error during close operation: %s",strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiVgaGetBacklightEnableEmul,
+                            EAPI_STATUS_ERROR  ,
+                            err);
+	    }
+	    }
         }
         else
         {
@@ -218,13 +230,25 @@ EApiVgaGetBacklightBrightnessEmul(
             int res = fscanf(f, "%" PRIu32, &value);
             if (res < 0)
             {
+		    fclose(f);
                 snprintf(err,sizeof(err),"Error during read operation: %s",strerror(errno));
                 EAPI_LIB_RETURN_ERROR(
                             EApiVgaGetBacklightBrightnessEmul,
                             EAPI_STATUS_ERROR  ,
                             err);
             }
-            fclose(f);
+	    else
+	    {
+            int retclose = fclose(f);
+	    if (retclose != 0 )
+	    {
+		    snprintf(err,sizeof(err),"Error during close operation: %s",strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiVgaGetBacklightBrightnessEmul,
+                            EAPI_STATUS_ERROR  ,
+                            err);
+	    }
+	    }
         }
         else
         {
@@ -290,13 +314,25 @@ EApiVgaSetBacklightBrightnessEmul(
             int res = fprintf(f, "%" PRIu32, newBrightness);
             if (res < 0)
             {
+		    fclose(f);
                 snprintf(err,sizeof(err),"Error during write operation: %s",strerror(errno));
                 EAPI_LIB_RETURN_ERROR(
                             EApiVgaSetBacklightBrightnessEmul,
                             EAPI_STATUS_ERROR  ,
                             err);
             }
-            fclose(f);
+	    else
+	    {
+            int retclose = fclose(f);
+	    if (retclose != 0)
+	    {
+		    snprintf(err,sizeof(err),"Error during close operation: %s",strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiVgaSetBacklightBrightnessEmul,
+                            EAPI_STATUS_ERROR  ,
+                            err);
+	    }
+	    }
         }
         else
         {
