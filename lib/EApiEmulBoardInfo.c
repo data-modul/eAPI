@@ -76,6 +76,7 @@ EApiBoardGetStringAEmul(
     char line[NAME_MAX];
     char path[NAME_MAX];
     char *p;
+    int retclose;
 
     BufLenSav=*pBufLen;
 
@@ -139,10 +140,11 @@ EApiBoardGetStringAEmul(
         f = fopen(path, "r");
         if (f != NULL)
         {
+		retclose = 0;
             char* res = fgets(line, sizeof(line), f);
-            fclose(f);
             if (res == NULL)
             {
+		    fclose(f);
                 snprintf(err,sizeof(err),"Error during read operation: %s\n ",strerror(errno));
                 EAPI_LIB_RETURN_ERROR(
                             EApiBoardGetStringAEmul,
@@ -150,6 +152,21 @@ EApiBoardGetStringAEmul(
                             err
                             );
             }
+	    else
+	    {
+		    retclose = fclose(f);
+
+	    if (retclose != 0 )
+            {
+                snprintf(err,sizeof(err),"Error during close operation: %s\n ",strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiBoardGetStringAEmul,
+                            EAPI_STATUS_ERROR  ,
+                            err
+                            );
+            }
+	    }
+
             p=strrchr(line, '\n');/* search last space */
             *p = '\0';/* split at last space */
             strcpy(info, line);
@@ -374,16 +391,29 @@ EApiBoardGetValueEmul(
     f = fopen(path, "r");
     if (f != NULL)
     {
+	    int retclose = 0;
         int res = fscanf(f, "%" PRIu32, &value);
         if (res < 0)
         {
+		fclose(f);
             snprintf(err,sizeof(err),"Error during read operation: %s",strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiBoardGetValueEmul,
                         EAPI_STATUS_ERROR  ,
                         err);
         }
-        fclose(f);
+	else
+	{
+		retclose = fclose(f);
+	if (retclose != 0)
+        {
+	    snprintf(err,sizeof(err),"Error during close operation: %s",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        EApiBoardGetValueEmul,
+                        EAPI_STATUS_ERROR  ,
+                        err);
+        }
+	}
     }
     else
     {

@@ -149,7 +149,17 @@ EApiStatus_t find_hwmon()
                         err);
         }
         px = fgets(s, NAME_MAX, f);
-        fclose(f);
+        int retclose = fclose(f);
+	if (retclose != 0 )
+	{
+		hwname = NULL;
+            closedir(dir);
+            snprintf(err,sizeof(err),"%s",strerror(errno));
+            EAPI_LIB_RETURN_ERROR(
+                        find_hwmon,
+                        EAPI_STATUS_UNSUPPORTED,
+                        err);
+	}
         if (!px) {
             fprintf(stderr, "%s: read error\n", n);
             continue;
