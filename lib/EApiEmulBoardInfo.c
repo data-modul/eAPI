@@ -249,10 +249,22 @@ EApiBoardGetValueEmul(
     switch (Id)
     {
     case EAPI_ID_BOARD_BOOT_COUNTER_VAL:
-        snprintf(path,sizeof(BOOT_COUNTER_PATH),BOOT_COUNTER_PATH);
+        EAPI_LIB_RETURN_ERROR_IF(
+                    EApiBoardGetValueEmul,
+                    (rtmname==NULL),
+                    EAPI_STATUS_ERROR,
+                    "Error finding RTM"
+                    );
+        snprintf(path,sizeof(RTM_PATH)+sizeof(rtmname)+sizeof("/rtm_boot_count")+1,RTM_PATH"%s/rtm_boot_count",rtmname);
         break;
     case EAPI_ID_BOARD_RUNNING_TIME_METER_VAL:
-        snprintf(path,sizeof(RUNTIME_PATH),RUNTIME_PATH);
+        EAPI_LIB_RETURN_ERROR_IF(
+                    EApiBoardGetValueEmul,
+                    (rtmname==NULL),
+                    EAPI_STATUS_ERROR,
+                    "Error finding RTM"
+                    );
+        snprintf(path,sizeof(RTM_PATH)+sizeof(rtmname)+sizeof("/rtm_time")+1,RTM_PATH"%s/rtm_time",rtmname);
         break;
     case EAPI_ID_BOARD_PNPID_VAL:
         *pValue=EAPI_PNPID_DM;
@@ -283,9 +295,9 @@ EApiBoardGetValueEmul(
                     "Error finding HWMON"
                     );
         if (board_type == BBW6)
-            snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp5_input"),HWMON_PATH"%s/temp5_input",hwname);
+            snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp5_input")+1,HWMON_PATH"%s/temp5_input",hwname);
         else if (board_type == CBS6)
-            snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp1_input"),HWMON_PATH"%s/temp1_input",hwname);
+            snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp1_input")+1,HWMON_PATH"%s/temp1_input",hwname);
         else
             EAPI_LIB_RETURN_ERROR(
                         EApiBoardGetValueEmul,
@@ -307,7 +319,7 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp4_input"),HWMON_PATH"%s/temp4_input",hwname);
+        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp4_input")+1,HWMON_PATH"%s/temp4_input",hwname);
         break;
     case EAPI_ID_HWMON_FAN_CPU:
         EAPI_LIB_RETURN_ERROR_IF(
@@ -316,7 +328,7 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/fan2_input"),HWMON_PATH"%s/fan2_input",hwname);
+        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/fan2_input")+1,HWMON_PATH"%s/fan2_input",hwname);
         break;
     case EAPI_ID_HWMON_FAN_SYSTEM:
         EAPI_LIB_RETURN_ERROR(
@@ -345,7 +357,7 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in0_input"),HWMON_PATH"%s/in0_input",hwname);
+        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in0_input")+1,HWMON_PATH"%s/in0_input",hwname);
         break;
     case EAPI_ID_HWMON_VOLTAGE_VBAT:
         EAPI_LIB_RETURN_ERROR_IF(
@@ -354,7 +366,7 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in1_input"),HWMON_PATH"%s/in1_input",hwname);
+        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in1_input")+1,HWMON_PATH"%s/in1_input",hwname);
         break;
     case EAPI_ID_HWMON_VOLTAGE_5V:
         *pValue=0xffffff;
@@ -370,7 +382,7 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in3_input"),HWMON_PATH"%s/in3_input",hwname);
+        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in3_input")+1,HWMON_PATH"%s/in3_input",hwname);
         break;
     case EAPI_ID_HWMON_VOLTAGE_12V:
         EAPI_LIB_RETURN_ERROR_IF(
@@ -379,7 +391,7 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in4_input"),HWMON_PATH"%s/in4_input",hwname);
+        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in4_input")+1,HWMON_PATH"%s/in4_input",hwname);
         break;
     default:
         EAPI_LIB_RETURN_ERROR(

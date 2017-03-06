@@ -18,12 +18,16 @@
 #define HWMON_PATH "/sys/class/hwmon/"
 #define HWMON_NAME "nct7802"
 
+#define RTM_PATH "/sys/bus/platform/drivers/dmec-rtm/"
+
+
 extern int eeprom_bus;
 extern uint8_t *eeprom_userSpaceBuf;
 
 extern int board_type;
 
 extern char *hwname;
+extern char *rtmname;
 
 extern char err[256];
 
