@@ -47,6 +47,7 @@ int eeprom_bus = -1;
 uint8_t *eeprom_userSpaceBuf = NULL;
 int board_type;
 char *hwname;
+char *rtmname;
 char err[256];
 
 unsigned int gpioLines = 0;
@@ -168,6 +169,57 @@ EApiStatus_t find_hwmon()
                     find_hwmon,
                     EAPI_STATUS_UNSUPPORTED,
                     "Info: No HWMON is found.");
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
+}
+
+EApiStatus_t find_rtm()
+{
+    struct dirent *de;
+    DIR *dir;
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+
+    char sysfs[NAME_MAX];
+    snprintf(sysfs,sizeof(RTM_PATH),RTM_PATH);
+
+    if(!(dir = opendir(sysfs)))
+    {
+        rtmname = NULL;
+
+        snprintf(err,sizeof(err),"%s",strerror(errno));
+        EAPI_LIB_RETURN_ERROR(
+                    find_rtm,
+                    EAPI_STATUS_UNSUPPORTED,
+                    err);
+    }
+    /* go through the rtm*/
+    rtmname = NULL;
+    StatusCode = EAPI_STATUS_UNSUPPORTED;
+    while ((de = readdir(dir)) != NULL) {
+
+         if (strstr(de->d_name, "dmec") != NULL)
+         {
+             rtmname = (char*)malloc(sizeof(de->d_name)*sizeof(char));
+             if (!rtmname)
+             {
+                 EAPI_LIB_RETURN_ERROR(
+                             find_rtm,
+                             EAPI_STATUS_ALLOC_ERROR,
+                             "Error in Allocating Memory");
+             }
+             strncpy(rtmname, de->d_name,sizeof(de->d_name));
+             StatusCode = EAPI_STATUS_SUCCESS;
+             break;
+         }
+         else
+             continue;
+    }
+    closedir(dir);
+    if (StatusCode == EAPI_STATUS_UNSUPPORTED )
+        EAPI_LIB_RETURN_ERROR(
+                    find_rtm,
+                    EAPI_STATUS_UNSUPPORTED,
+                    "Info: No RTM is found.");
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -394,9 +446,9 @@ EApiInitLib(){
         }
         else
         {
-            if(!strncmp(line,"eDM-COMC-BS6",12))
+            if (strstr(line, "COMC") != NULL)
                 board_type = CBS6;
-            else if(!strncmp(line,"eDM-COMB-BW6",12))
+            else if (strstr(line, "COMB") != NULL)
                 board_type = BBW6;
         }
 	int retclose = fclose(f);
@@ -422,6 +474,10 @@ EApiInitLib(){
     /* ******************** HWMON ************************** */
     hwname = NULL;
     find_hwmon();
+
+    /* ******************** RTM ************************** */
+    rtmname = NULL;
+    find_rtm();
 
     /* ******************** GPIO ************************** */
     StatusCode = list_gpio_device();
@@ -464,12 +520,10 @@ EApiUninitLib(){
     }
 
     if(hwname != NULL)
-
-
-
         free(hwname);
 
-
+    if(rtmname != NULL)
+        free(rtmname);
 
     if(gpiofdDirection != NULL)
     {

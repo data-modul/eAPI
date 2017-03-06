@@ -59,6 +59,7 @@ EApiInitLib();
 uint32_t
 EApiUninitLib();
 EApiStatus_t find_hwmon();
+EApiStatus_t find_rtm();
 EApiStatus_t list_gpio_device();
 EApiStatus_t gpio_files_create(void);
 
