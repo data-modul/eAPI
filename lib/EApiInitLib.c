@@ -281,8 +281,7 @@ EApiStatus_t gpio_dev_open(const char *device_name)
     int ret = -1;
     unsigned int i;
 
-
-    snprintf(chrdev_name, sizeof("/dev/")+sizeof(device_name)+1,"/dev/%s",device_name);
+    snprintf(chrdev_name, sizeof("/dev/")+strlen(device_name),"/dev/%s",device_name);
     gpiofd = open(chrdev_name, O_WRONLY);
     if(gpiofd < 0)
     {
