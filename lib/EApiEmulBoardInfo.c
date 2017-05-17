@@ -84,7 +84,7 @@ EApiBoardGetStringAEmul(
     if (Id ==  EAPI_DMO_ID_BOARD_MANUFACTURING_DATE_STR)
         info = (char*)eeprom_analyze(SMBIOS_BLOCK, MANUFACTURE_DATE_TYPE,MANUFACTURE_DATE_ASCII_IND);
     else if (Id ==  EAPI_DMO_ID_BOARD_ID_STR)
-         info = (char*)eeprom_analyze(SMBIOS_BLOCK, BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
+        info = (char*)eeprom_analyze(SMBIOS_BLOCK, BOARD_ID_TYPE,BOARD_ID_ASCII_IND);
     else if (Id == EAPI_ID_BOARD_PLATFORM_TYPE_STR)
     {
         info = (char *)calloc(NAME_MAX, sizeof(char));
@@ -140,11 +140,11 @@ EApiBoardGetStringAEmul(
         f = fopen(path, "r");
         if (f != NULL)
         {
-		retclose = 0;
+            retclose = 0;
             char* res = fgets(line, sizeof(line), f);
             if (res == NULL)
             {
-		    fclose(f);
+                fclose(f);
                 snprintf(err,sizeof(err),"Error during read operation: %s\n ",strerror(errno));
                 EAPI_LIB_RETURN_ERROR(
                             EApiBoardGetStringAEmul,
@@ -152,20 +152,20 @@ EApiBoardGetStringAEmul(
                             err
                             );
             }
-	    else
-	    {
-		    retclose = fclose(f);
-
-	    if (retclose != 0 )
+            else
             {
-                snprintf(err,sizeof(err),"Error during close operation: %s\n ",strerror(errno));
-                EAPI_LIB_RETURN_ERROR(
-                            EApiBoardGetStringAEmul,
-                            EAPI_STATUS_ERROR  ,
-                            err
-                            );
+                retclose = fclose(f);
+
+                if (retclose != 0 )
+                {
+                    snprintf(err,sizeof(err),"Error during close operation: %s\n ",strerror(errno));
+                    EAPI_LIB_RETURN_ERROR(
+                                EApiBoardGetStringAEmul,
+                                EAPI_STATUS_ERROR  ,
+                                err
+                                );
+                }
             }
-	    }
 
             p=strrchr(line, '\n');/* search last space */
             *p = '\0';/* split at last space */
@@ -255,7 +255,7 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding RTM"
                     );
-        snprintf(path,sizeof(RTM_PATH)+sizeof(rtmname)+sizeof("/rtm_boot_count")+1,RTM_PATH"%s/rtm_boot_count",rtmname);
+        snprintf(path,strlen(RTM_PATH)+strlen(rtmname)+strlen("/rtm_boot_count")+1,RTM_PATH"%s/rtm_boot_count",rtmname);
         break;
     case EAPI_ID_BOARD_RUNNING_TIME_METER_VAL:
         EAPI_LIB_RETURN_ERROR_IF(
@@ -264,7 +264,7 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding RTM"
                     );
-        snprintf(path,sizeof(RTM_PATH)+sizeof(rtmname)+sizeof("/rtm_time")+1,RTM_PATH"%s/rtm_time",rtmname);
+        snprintf(path,strlen(RTM_PATH)+strlen(rtmname)+strlen("/rtm_time")+1,RTM_PATH"%s/rtm_time",rtmname);
         break;
     case EAPI_ID_BOARD_PNPID_VAL:
         *pValue=EAPI_PNPID_DM;
@@ -287,25 +287,16 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_UNSUPPORTED  ,
                     "Unsupported ID"
                     );
-    case EAPI_ID_HWMON_CPU_TEMP:/* it is different for BBW6 and CBS6 */
+    case EAPI_ID_HWMON_CPU_TEMP:
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    (hwname==NULL),
+                    (acpiHwmonName==NULL),
                     EAPI_STATUS_ERROR,
-                    "Error finding HWMON"
+                    "Error finding ACPI-HWMON"
                     );
-        if (board_type == BBW6)
-            snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp5_input")+1,HWMON_PATH"%s/temp5_input",hwname);
-        else if (board_type == CBS6)
-            snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp1_input")+1,HWMON_PATH"%s/temp1_input",hwname);
-        else
-            EAPI_LIB_RETURN_ERROR(
-                        EApiBoardGetValueEmul,
-                        EAPI_STATUS_UNSUPPORTED  ,
-                        "Not support CPU Temperature"
-                        );
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_temp_cpu")+ 1,ACPIHWMON_PATH"%s/acpi_temp_cpu",acpiHwmonName);
         break;
-    case EAPI_ID_HWMON_CHIPSET_TEMP:/* it is different for BBW6 and CBS6 */
+    case EAPI_ID_HWMON_CHIPSET_TEMP:
         EAPI_LIB_RETURN_ERROR(
                     EApiBoardGetValueEmul,
                     EAPI_STATUS_UNSUPPORTED  ,
@@ -315,83 +306,92 @@ EApiBoardGetValueEmul(
     case EAPI_ID_HWMON_SYSTEM_TEMP:
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    (hwname==NULL),
+                    (acpiHwmonName==NULL),
                     EAPI_STATUS_ERROR,
-                    "Error finding HWMON"
+                    "Error finding ACPI-HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/temp4_input")+1,HWMON_PATH"%s/temp4_input",hwname);
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_temp_board")+1,ACPIHWMON_PATH"%s/acpi_temp_board",acpiHwmonName);
         break;
     case EAPI_ID_HWMON_FAN_CPU:
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    (hwname==NULL),
+                    (acpiHwmonName==NULL),
                     EAPI_STATUS_ERROR,
-                    "Error finding HWMON"
+                    "Error finding ACPI-HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/fan2_input")+1,HWMON_PATH"%s/fan2_input",hwname);
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_fan_cpu")+1,ACPIHWMON_PATH"%s/acpi_fan_cpu",acpiHwmonName);
         break;
     case EAPI_ID_HWMON_FAN_SYSTEM:
-        EAPI_LIB_RETURN_ERROR(
+        EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Unsupported ID"
+                    (acpiHwmonName==NULL),
+                    EAPI_STATUS_ERROR,
+                    "Error finding ACPI-HWMON"
                     );
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_fan_sys")+1,ACPIHWMON_PATH"%s/acpi_fan_sys",acpiHwmonName);
+        break;
     case EAPI_ID_HWMON_VOLTAGE_VCORE:
-        *pValue=0xffffff;
-        EAPI_LIB_RETURN_ERROR(
+        EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Unsupported Value"
+                    (acpiHwmonName==NULL),
+                    EAPI_STATUS_ERROR,
+                    "Error finding ACPI-HWMON"
                     );
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_vol_vcore")+1,ACPIHWMON_PATH"%s/acpi_vol_vcore",acpiHwmonName);
+        break;
     case EAPI_ID_HWMON_VOLTAGE_2V5:
-        *pValue=0xffffff;
-        EAPI_LIB_RETURN_ERROR(
+        EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Unsupported Value"
+                    (acpiHwmonName==NULL),
+                    EAPI_STATUS_ERROR,
+                    "Error finding ACPI-HWMON"
                     );
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_vol_2v5")+1,ACPIHWMON_PATH"%s/acpi_vol_2v5",acpiHwmonName);
+        break;
     case EAPI_ID_HWMON_VOLTAGE_3V3:
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    (hwname==NULL),
+                    (acpiHwmonName==NULL),
                     EAPI_STATUS_ERROR,
-                    "Error finding HWMON"
+                    "Error finding ACPI-HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in0_input")+1,HWMON_PATH"%s/in0_input",hwname);
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_vol_3v3")+1,ACPIHWMON_PATH"%s/acpi_vol_3v3",acpiHwmonName);
         break;
     case EAPI_ID_HWMON_VOLTAGE_VBAT:
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    (hwname==NULL),
+                    (acpiHwmonName==NULL),
                     EAPI_STATUS_ERROR,
-                    "Error finding HWMON"
+                    "Error finding ACPI-HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in1_input")+1,HWMON_PATH"%s/in1_input",hwname);
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_vol_vbat")+1,ACPIHWMON_PATH"%s/acpi_vol_vbat",acpiHwmonName);
         break;
     case EAPI_ID_HWMON_VOLTAGE_5V:
-        *pValue=0xffffff;
-        EAPI_LIB_RETURN_ERROR(
+        EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Unsupported Value"
+                    (acpiHwmonName==NULL),
+                    EAPI_STATUS_ERROR,
+                    "Error finding ACPI-HWMON"
                     );
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_vol_5v")+1,ACPIHWMON_PATH"%s/acpi_vol_5v",acpiHwmonName);
+        break;
     case EAPI_ID_HWMON_VOLTAGE_5VSB:
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    (hwname==NULL),
+                    (acpiHwmonName==NULL),
                     EAPI_STATUS_ERROR,
-                    "Error finding HWMON"
+                    "Error finding ACPI-HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in3_input")+1,HWMON_PATH"%s/in3_input",hwname);
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_vol_5vsb")+1,ACPIHWMON_PATH"%s/acpi_vol_5vsb",acpiHwmonName);
         break;
     case EAPI_ID_HWMON_VOLTAGE_12V:
         EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    (hwname==NULL),
+                    (acpiHwmonName==NULL),
                     EAPI_STATUS_ERROR,
-                    "Error finding HWMON"
+                    "Error finding ACPI-HWMON"
                     );
-        snprintf(path,sizeof(HWMON_PATH)+sizeof(hwname)+sizeof("/in4_input")+1,HWMON_PATH"%s/in4_input",hwname);
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_vol_12v")+1,ACPIHWMON_PATH"%s/acpi_vol_12v",acpiHwmonName);
         break;
     default:
         EAPI_LIB_RETURN_ERROR(
@@ -403,61 +403,48 @@ EApiBoardGetValueEmul(
     f = fopen(path, "r");
     if (f != NULL)
     {
-	    int retclose = 0;
+        int retclose = 0;
         int res = fscanf(f, "%" PRIu32, &value);
         if (res < 0)
         {
-		fclose(f);
-            snprintf(err,sizeof(err),"Error during read operation: %s",strerror(errno));
+            fclose(f);
+            snprintf(err,strlen(err),"Error during read operation: %s",strerror(errno));
             EAPI_LIB_RETURN_ERROR(
                         EApiBoardGetValueEmul,
                         EAPI_STATUS_ERROR  ,
                         err);
         }
-	else
-	{
-		retclose = fclose(f);
-	if (retclose != 0)
+        else
         {
-	    snprintf(err,sizeof(err),"Error during close operation: %s",strerror(errno));
-            EAPI_LIB_RETURN_ERROR(
-                        EApiBoardGetValueEmul,
-                        EAPI_STATUS_ERROR  ,
-                        err);
+            retclose = fclose(f);
+            if (retclose != 0)
+            {
+                snprintf(err,strlen(err),"Error during close operation: %s",strerror(errno));
+                EAPI_LIB_RETURN_ERROR(
+                            EApiBoardGetValueEmul,
+                            EAPI_STATUS_ERROR  ,
+                            err);
+            }
         }
-	}
     }
     else
     {
-        snprintf(err,sizeof(err),"Error in open file operation: %s",strerror(errno));
+        snprintf(err,strlen(err),"Error in open file operation: %s",strerror(errno));
         EAPI_LIB_RETURN_ERROR(
                     EApiBoardGetValueEmul,
                     EAPI_STATUS_ERROR  ,
                     err);
     }
-
-    if(Id == EAPI_ID_HWMON_VOLTAGE_VBAT && value!=0xffffff)
-    {
-        *pValue = (value * 1702) / 1000;
-        if (*pValue < 2000) /* less than 2V means no Battery */
-            *pValue = 0xffffff;
-    }
-    else if(Id == EAPI_ID_HWMON_VOLTAGE_5VSB && value!=0xffffff)
-        *pValue = (value * 3000) / 1000;
-    else if(Id == EAPI_ID_HWMON_VOLTAGE_12V && value!=0xffffff)
-        *pValue = (value * 10000) / 1000;
-    else if((Id == EAPI_ID_HWMON_CPU_TEMP ||
-             Id == EAPI_ID_HWMON_CHIPSET_TEMP ||
-             Id == EAPI_ID_HWMON_SYSTEM_TEMP ) && value!=0xffffff)
-        *pValue = (value + 273150)/100; /* mCelcius + (273.15*1000)/100 =>0.1K */
+    if(Id == EAPI_ID_HWMON_VOLTAGE_VBAT && value!=0xffffffff && value < 2000) /* less than 2V means no Battery */
+        *pValue = 0xffffffff;
     else
-        *pValue=value;
+        *pValue = value;
 
-    if (*pValue==0xffffff)
+    if (*pValue==0xffffffff)
         EAPI_LIB_RETURN_ERROR(
                     EApiBoardGetValueEmul,
-                    EAPI_STATUS_ERROR  ,
-                    "Invalid Value"
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "Unsupported ID"
                     );
 
     EAPI_LIB_RETURN_SUCCESS(EApiBoardGetValueEmul, "");
