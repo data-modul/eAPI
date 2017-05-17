@@ -297,11 +297,13 @@ EApiBoardGetValueEmul(
         snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_temp_cpu")+ 1,ACPIHWMON_PATH"%s/acpi_temp_cpu",acpiHwmonName);
         break;
     case EAPI_ID_HWMON_CHIPSET_TEMP:
-        EAPI_LIB_RETURN_ERROR(
+        EAPI_LIB_RETURN_ERROR_IF(
                     EApiBoardGetValueEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "Not support chipset Temperature"
+                    (acpiHwmonName==NULL),
+                    EAPI_STATUS_ERROR,
+                    "Error finding ACPI-HWMON"
                     );
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_temp_chipset")+ 1,ACPIHWMON_PATH"%s/acpi_temp_chipset",acpiHwmonName);
         break;
     case EAPI_ID_HWMON_SYSTEM_TEMP:
         EAPI_LIB_RETURN_ERROR_IF(
@@ -310,7 +312,7 @@ EApiBoardGetValueEmul(
                     EAPI_STATUS_ERROR,
                     "Error finding ACPI-HWMON"
                     );
-        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_temp_board")+1,ACPIHWMON_PATH"%s/acpi_temp_board",acpiHwmonName);
+        snprintf(path,strlen(ACPIHWMON_PATH)+strlen(acpiHwmonName)+strlen("/acpi_temp_sys")+1,ACPIHWMON_PATH"%s/acpi_temp_sys",acpiHwmonName);
         break;
     case EAPI_ID_HWMON_FAN_CPU:
         EAPI_LIB_RETURN_ERROR_IF(
