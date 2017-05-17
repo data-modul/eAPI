@@ -45,8 +45,7 @@
 FILE *OutputStream=NULL;
 int eeprom_bus = -1;
 uint8_t *eeprom_userSpaceBuf = NULL;
-int board_type;
-char *hwname;
+char *acpiHwmonName;
 char *rtmname;
 char err[256];
 
@@ -74,101 +73,53 @@ void __cdecl DebugMsg(__IN const char *const fmt, ...)
 }
 
 
-EApiStatus_t find_hwmon()
+EApiStatus_t find_acpiHwmon()
 {
-    char s[NAME_MAX];
     struct dirent *de;
     DIR *dir;
-    FILE *f;
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-    char *px;
 
-    char sysfs[NAME_MAX], n[NAME_MAX];
-    snprintf(sysfs,sizeof(HWMON_PATH),HWMON_PATH);
+    char sysfs[NAME_MAX];
+    snprintf(sysfs,sizeof(ACPIHWMON_PATH),ACPIHWMON_PATH);
 
     if(!(dir = opendir(sysfs)))
     {
-        hwname = NULL;
+        acpiHwmonName = NULL;
 
         snprintf(err,sizeof(err),"%s",strerror(errno));
         EAPI_LIB_RETURN_ERROR(
-                    find_hwmon,
+                    find_acpiHwmon,
                     EAPI_STATUS_UNSUPPORTED,
                     err);
     }
-    /* go through the hwmons */
+    /* go through the acpi-hwmon*/
+    acpiHwmonName = NULL;
+    StatusCode = EAPI_STATUS_UNSUPPORTED;
     while ((de = readdir(dir)) != NULL) {
 
-        if (!strcmp(de->d_name, "."))
-            continue;
-        if (!strcmp(de->d_name, ".."))
-            continue;
-        /* this should work for kernels 2.6.5 or higher and */
-        /* is preferred because is unambiguous */
-        sprintf(n, "%s/%s/name", sysfs, de->d_name);
-        f = fopen(n, "r");
-        /* this seems to work for ISA */
-        if(f == NULL) {
-            sprintf(n, "%s/%s/device/name", sysfs, de->d_name);
-            f = fopen(n, "r");
-        }
-        if(f == NULL)
+        if (strstr(de->d_name, "dmec") != NULL)
         {
-            hwname = NULL;
-            closedir(dir);
-            snprintf(err,sizeof(err),"%s",strerror(errno));
-            EAPI_LIB_RETURN_ERROR(
-                        find_hwmon,
-                        EAPI_STATUS_UNSUPPORTED,
-                        err);
-        }
-        px = fgets(s, NAME_MAX, f);
-        int retclose = fclose(f);
-	if (retclose != 0 )
-	{
-		hwname = NULL;
-            closedir(dir);
-            snprintf(err,sizeof(err),"%s",strerror(errno));
-            EAPI_LIB_RETURN_ERROR(
-                        find_hwmon,
-                        EAPI_STATUS_UNSUPPORTED,
-                        err);
-	}
-        if (!px) {
-            fprintf(stderr, "%s: read error\n", n);
-            continue;
-        }
-        if ((px = strchr(s, '\n')) != NULL)
-            *px = 0;
-
-        if( (s != NULL) && (!strncmp(s, HWMON_NAME,sizeof(HWMON_NAME))))
-        {
-            hwname = (char*)malloc(sizeof(de->d_name)*sizeof(char));
-            if (!hwname)
+            acpiHwmonName = (char*)malloc(sizeof(de->d_name)*sizeof(char));
+            if (!acpiHwmonName)
             {
                 EAPI_LIB_RETURN_ERROR(
-                            find_hwmon,
+                            find_acpiHwmon,
                             EAPI_STATUS_ALLOC_ERROR,
                             "Error in Allocating Memory");
             }
-            strncpy(hwname, de->d_name,sizeof(de->d_name));
+            strncpy(acpiHwmonName, de->d_name,sizeof(de->d_name));
             StatusCode = EAPI_STATUS_SUCCESS;
             break;
         }
         else
-        {
-            hwname = NULL;
-            StatusCode = EAPI_STATUS_UNSUPPORTED;
-        }
-
+            continue;
     }
-
     closedir(dir);
     if (StatusCode == EAPI_STATUS_UNSUPPORTED )
         EAPI_LIB_RETURN_ERROR(
-                    find_hwmon,
+                    find_acpiHwmon,
                     EAPI_STATUS_UNSUPPORTED,
-                    "Info: No HWMON is found.");
+                    "Info: No ACPI-HWMON is found.");
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -197,22 +148,22 @@ EApiStatus_t find_rtm()
     StatusCode = EAPI_STATUS_UNSUPPORTED;
     while ((de = readdir(dir)) != NULL) {
 
-         if (strstr(de->d_name, "dmec") != NULL)
-         {
-             rtmname = (char*)malloc(sizeof(de->d_name)*sizeof(char));
-             if (!rtmname)
-             {
-                 EAPI_LIB_RETURN_ERROR(
-                             find_rtm,
-                             EAPI_STATUS_ALLOC_ERROR,
-                             "Error in Allocating Memory");
-             }
-             strncpy(rtmname, de->d_name,sizeof(de->d_name));
-             StatusCode = EAPI_STATUS_SUCCESS;
-             break;
-         }
-         else
-             continue;
+        if (strstr(de->d_name, "dmec") != NULL)
+        {
+            rtmname = (char*)malloc(sizeof(de->d_name)*sizeof(char));
+            if (!rtmname)
+            {
+                EAPI_LIB_RETURN_ERROR(
+                            find_rtm,
+                            EAPI_STATUS_ALLOC_ERROR,
+                            "Error in Allocating Memory");
+            }
+            strncpy(rtmname, de->d_name,sizeof(de->d_name));
+            StatusCode = EAPI_STATUS_SUCCESS;
+            break;
+        }
+        else
+            continue;
     }
     closedir(dir);
     if (StatusCode == EAPI_STATUS_UNSUPPORTED )
@@ -390,8 +341,6 @@ EApiStatus_t gpio_files_create(void)
         gpiofdValue[i] =  -1 ;
     }
 
-
-
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -400,9 +349,6 @@ EApiStatus_t
 EApiInitLib(){
 
     char* logpath = getenv("LOGPATH");
-    char path[NAME_MAX];
-    FILE *f = NULL;
-    char line[NAME_MAX];
 
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EApiStatus_t StatusCode2=EAPI_STATUS_SUCCESS;
@@ -428,52 +374,9 @@ EApiInitLib(){
     eeprom_bus = find_eeprom();
     /* ******************** USER SPACE EEPROM ************************** */
     eeprom_userSpaceBuf = eeprom_userSpace();
-
-    /* ******************** Detect_board_type ************************** */
-    strncpy(path, "/sys/class/dmi/id/board_name", sizeof("/sys/class/dmi/id/board_name"));
-    board_type = UNKNOWN;
-    f = fopen(path, "r");
-    if (f != NULL)
-    {
-        char* res = fgets(line, sizeof(line), f);
-        if (res == NULL)
-        {
-            EAPI_FORMATED_MES('E',
-                              EApiInitLib,
-                              EAPI_STATUS_UNSUPPORTED,
-                              err
-                              );
-        }
-        else
-        {
-            if (strstr(line, "COMC") != NULL)
-                board_type = CBS6;
-            else if (strstr(line, "COMB") != NULL)
-                board_type = BBW6;
-        }
-	int retclose = fclose(f);
-	if (retclose != 0 )
-	{
-		EAPI_FORMATED_MES('E',
-                              EApiInitLib,
-                              EAPI_STATUS_UNSUPPORTED,
-                              "error in closeing file dmi/id/board_name"
-                              );
-	}
-    }
-    else
-    {
-        snprintf(err,sizeof(err),"Error in open file operation: %s\n ",strerror(errno));
-        EAPI_FORMATED_MES('E',
-                          EApiInitLib,
-                          EAPI_STATUS_UNSUPPORTED,
-                          err
-                          );
-    }
-
-    /* ******************** HWMON ************************** */
-    hwname = NULL;
-    find_hwmon();
+    /* ******************** ACPI-HWMON ************************** */
+    acpiHwmonName = NULL;
+    find_acpiHwmon();
 
     /* ******************** RTM ************************** */
     rtmname = NULL;
@@ -519,8 +422,8 @@ EApiUninitLib(){
         OutputStream=NULL;
     }
 
-    if(hwname != NULL)
-        free(hwname);
+    if(acpiHwmonName != NULL)
+        free(acpiHwmonName);
 
     if(rtmname != NULL)
         free(rtmname);
