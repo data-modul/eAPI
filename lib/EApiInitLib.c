@@ -56,6 +56,14 @@ unsigned int gpioLines = 0;
 int gpiofd  = -1;
 int gpioEnabled = 0 ;
 
+/* PWM  */
+PWM_HW_CONFIG  pwmChannel[2];
+char *pathPwmChannel0;
+char *pathPwmChannel1;
+char *pathPwmConfigure;
+char *pwmchip;
+/* end PWM */
+
 
 struct gpio_flag {
     char *name;
@@ -421,6 +429,7 @@ EApiUninitLib(){
              "#\n"
              );
     unsigned i =0;
+    int fd;
 
     if(OutputStream!=NULL){
         fclose(OutputStream);
@@ -449,6 +458,43 @@ EApiUninitLib(){
 
     if(eeprom_userSpaceBuf)
         free(eeprom_userSpaceBuf);
+
+    /* pwm */
+    if(pathPwmConfigure)
+        free(pathPwmConfigure);
+
+    if(pwmChannel[0].exported || pwmChannel[1].exported)
+    {
+        char pwmunexport[NAME_MAX];
+
+        snprintf(pwmunexport,strlen(pwmchip)+strlen("/unexport")+1,"%s/unexport",pwmchip);
+        if ((fd = open(pwmunexport, O_WRONLY)) < 0) {
+            snprintf(err,sizeof(err),"Failed to unexport pwm");
+            EAPI_FORMATED_MES('E',
+                              EApiUninitLib,
+                              EAPI_STATUS_ERROR,
+                              err
+                              );
+        }
+        if((pwmChannel[0].exported == 1 && pwmChannel[1].exported == 0) ||
+           (pwmChannel[0].exported == 0 && pwmChannel[1].exported == 1))
+            write(fd, "0", strlen("0"));
+        else
+        {
+            write(fd, "0", strlen("0"));
+            write(fd, "1", strlen("1"));
+        }
+        close(fd);
+
+        if(pathPwmChannel0)
+            free(pathPwmChannel0);
+
+        if(pathPwmChannel1)
+            free(pathPwmChannel1);
+    }
+
+    if(pwmchip)
+        free(pwmchip);
 
     return EAPI_STATUS_SUCCESS;
 }

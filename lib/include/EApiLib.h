@@ -47,6 +47,7 @@
 #include <stdlib.h>
 #include <EApiOs.h>
 #include <EApi.h>
+#include <EApiExt.h>
 #include <EApiCommon.h>
 #include <LibVer.h>
 #include <EApiDmo.h>
@@ -64,6 +65,7 @@
 #include <EApiInitLib.h>
 #include <EApiEmulStorage.h>
 #include <EApiEmulWDT.h>
+#include <EApiEmulPWM.h>
 #include <EApiEmulBacklight.h>
 #include <EApiEmulBoardInfo.h>
 #include <DbgChk.h>

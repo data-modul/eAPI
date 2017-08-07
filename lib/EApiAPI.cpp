@@ -67,9 +67,9 @@ EAPI_CALLTYPE
 EApiI2CGetBusCap(
         __IN  EApiId_t  Id         , /* I2C Bus Id */
         __OUT uint32_t *pMaxBlkLen   /* Max Block Length
-                                          * Supported on this
-                                          * interface
-                                          */
+                                                  * Supported on this
+                                                  * interface
+                                                  */
         )
 {
     EApiStatus_t StatusCode;
@@ -86,16 +86,16 @@ EAPI_CALLTYPE
 EApiI2CWriteReadRawSpecific(
         __IN     EApiId_t  Id       , /* I2C Bus Id */
         __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
-                                           * Device Address
-                                           */
+                                                   * Device Address
+                                                   */
         __INOPT  void     *pWBuffer , /* Write Data pBuffer */
         __IN     uint32_t  WriteBCnt, /* Number of Bytes to write */
-         __IN     uint32_t  CmdBCnt, /* Number of Cmd Bytes to write */
+        __IN     uint32_t  CmdBCnt, /* Number of Cmd Bytes to write */
         __OUTOPT void     *pRBuffer , /* Read Data pBuffer */
         __IN     uint32_t  RBufLen  , /* Data pBuffer Length */
         __IN     uint32_t  ReadBCnt   /* Number of Bytes to
-                                           * Read
-                                           */
+                                                   * Read
+                                                   */
         )
 {
 
@@ -121,17 +121,17 @@ EApiI2CWriteReadRawSpecific(
                 Addr, WriteBCnt, RBufLen, WriteBCnt, ReadBCnt
                 );
 #endif
-      EAPI_LIB_ASSERT_PARAMATER_CHECK(
-          EApiI2CWriteReadRawSpecific,
-          (ReadBCnt>1)&&(pRBuffer==NULL) ,
-          "pRBuffer is NULL"
-          );
+    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+                EApiI2CWriteReadRawSpecific,
+                (ReadBCnt>1)&&(pRBuffer==NULL) ,
+                "pRBuffer is NULL"
+                );
 
-//    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-//                EApiI2CWriteReadRaw,
-//                (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
-//                "pRBuffer is NULL"
-//                );
+    //    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+    //                EApiI2CWriteReadRaw,
+    //                (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
+    //                "pRBuffer is NULL"
+    //                );
     EAPI_LIB_ASSERT_PARAMATER_CHECK(
                 EApiI2CWriteReadRawSpecific,
                 (ReadBCnt>1)&&(RBufLen==0) ,
@@ -168,17 +168,17 @@ EAPI_CALLTYPE
 EApiI2CWriteReadRaw(
         __IN     EApiId_t  Id       , /* I2C Bus Id */
         __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
-                                           * Device Address
-                                           */
+                                                   * Device Address
+                                                   */
         __INOPT  void     *pWBuffer , /* Write Data pBuffer */
         __IN     uint32_t  WriteBCnt, /* Number of Bytes to
-                                           * write
-                                           */
+                                                   * write
+                                                   */
         __OUTOPT void     *pRBuffer , /* Read Data pBuffer */
         __IN     uint32_t  RBufLen  , /* Data pBuffer Length */
         __IN     uint32_t  ReadBCnt   /* Number of Bytes to
-                                           * Read
-                                           */
+                                                   * Read
+                                                   */
         )
 {
 
@@ -204,17 +204,17 @@ EApiI2CWriteReadRaw(
                 Addr, WriteBCnt, RBufLen, WriteBCnt, ReadBCnt
                 );
 #endif
-      EAPI_LIB_ASSERT_PARAMATER_CHECK(
-          EApiI2CWriteReadRaw,
-          (ReadBCnt>1)&&(pRBuffer==NULL) ,
-          "pRBuffer is NULL"
-          );
+    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+                EApiI2CWriteReadRaw,
+                (ReadBCnt>1)&&(pRBuffer==NULL) ,
+                "pRBuffer is NULL"
+                );
 
-//    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-//                EApiI2CWriteReadRaw,
-//                (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
-//                "pRBuffer is NULL"
-//                );
+    //    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+    //                EApiI2CWriteReadRaw,
+    //                (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
+    //                "pRBuffer is NULL"
+    //                );
     EAPI_LIB_ASSERT_PARAMATER_CHECK(
                 EApiI2CWriteReadRaw,
                 (ReadBCnt>1)&&(RBufLen==0) ,
@@ -251,8 +251,8 @@ EAPI_CALLTYPE
 EApiI2CReadTransfer(
         __IN  EApiId_t  Id      , /* I2C Bus Id */
         __IN  uint32_t  Addr    , /* Encoded 7/10Bit I2C
-                                       * Device Address
-                                       */
+                                               * Device Address
+                                               */
         __IN  uint32_t  Cmd     , /* I2C Command/Offset */
         __OUT void *pBuffer , /* Transfer Data pBuffer */
         __IN  uint32_t  BufLen  , /* Data pBuffer Length */
@@ -304,7 +304,7 @@ EApiI2CReadTransfer(
                     "10Bit Address is not supported"
                     );
 
-       /* LclpBuffer[LclByteCnt++]=(uint8_t)(Addr&0xFF);
+        /* LclpBuffer[LclByteCnt++]=(uint8_t)(Addr&0xFF);
         Addr>>=8;*/
     }
 
@@ -337,8 +337,8 @@ EAPI_CALLTYPE
 EApiI2CWriteTransfer(
         __IN  EApiId_t  Id      , /* I2C Bus Id */
         __IN  uint32_t  Addr    , /* Encoded 7/10Bit I2C
-                                       * Device Address
-                                       */
+                                               * Device Address
+                                               */
         __IN  uint32_t  Cmd     , /* I2C Command/Offset */
         __IN  void *pBuffer , /* Transfer Data pBuffer */
         __IN  uint32_t  ByteCnt   /* Byte Count to write */
@@ -365,7 +365,7 @@ EApiI2CWriteTransfer(
                 "Id=%08"PRIX32" ADDR=%04"PRIX32
                 " CMD=%04"PRIX32" BCNT=%04"PRIX32"\n",
                 Id, Addr, Cmd, ByteCnt
-            );
+                );
 #endif
 
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiI2CWriteTransfer, ByteCnt);
@@ -377,7 +377,7 @@ EApiI2CWriteTransfer(
                     EAPI_STATUS_UNSUPPORTED  ,
                     "10Bit Address is not supported"
                     );
-   /*     *pLclBuffer=(uint8_t)Addr&0xFF;
+        /*     *pLclBuffer=(uint8_t)Addr&0xFF;
         Addr>>=8;
         LclByteCnt++;*/
     }
@@ -425,19 +425,19 @@ EApiI2CWriteTransfer(
                 "Id=%08"PRIX32" ADDR=%04"PRIX32" CMD=%04"PRIX32
                 " BCNT=%04"PRIX32"\n",
                 Id, Addr, Cmd, ByteCnt
-            );
+                );
 #endif
 
-      StatusCode=EApiI2CWriteReadRawSpecific(
-          Id,
-          (uint8_t)Addr,
-          pLclBuffer,
-          LclByteCnt+ByteCnt+1,
-          LclCmdBcnt,
-          NULL,
-          0,
-          0
-          );
+    StatusCode=EApiI2CWriteReadRawSpecific(
+                Id,
+                (uint8_t)Addr,
+                pLclBuffer,
+                LclByteCnt+ByteCnt+1,
+                LclCmdBcnt,
+                NULL,
+                0,
+                0
+                );
 
     if(LclByteCnt)
         free(pLclBuffer);
@@ -450,8 +450,8 @@ EAPI_CALLTYPE
 EApiI2CProbeDevice(
         __IN  EApiId_t  Id   , /* I2C Bus Id */
         __IN  uint32_t  Addr   /* Encoded 7/10Bit
-                                    * I2C Device Address
-                                    */
+                                            * I2C Device Address
+                                            */
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
@@ -608,11 +608,11 @@ EApiVgaSetBacklightBrightness(
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EAPI_CHECK_INITIALIZED(EApiVgaSetBacklightBrightness);
-//    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-//                EApiVgaSetBacklightBrightness,
-//                (Bright>EAPI_BACKLIGHT_SET_BRIGHTEST),
-//                "Brightness Invalid Value"
-//                );
+    //    EAPI_LIB_ASSERT_PARAMATER_CHECK(
+    //                EApiVgaSetBacklightBrightness,
+    //                (Bright>EAPI_BACKLIGHT_SET_BRIGHTEST),
+    //                "Brightness Invalid Value"
+    //                );
 
     StatusCode=EApiVgaSetBacklightBrightnessEmul(Id, Bright);
     EAPI_LIB_ASSERT_EXIT
@@ -636,8 +636,8 @@ EAPI_CALLTYPE
 EApiGPIOGetLevel(
         __IN  EApiId_t Id          , /* GPIO Id */
         __IN  uint32_t Bitmask     , /* Bit mask of Affected
-                                          * Bits
-                                          */
+                                                  * Bits
+                                                  */
         __OUT uint32_t *pLevel       /* Current Level */
         )
 {
@@ -657,8 +657,8 @@ EAPI_CALLTYPE
 EApiGPIOSetLevel(
         __IN  EApiId_t Id          , /* GPIO Id */
         __IN  uint32_t Bitmask     , /* Bit mask of Affected
-                                          * Bits
-                                          */
+                                                  * Bits
+                                                  */
         __IN  uint32_t Level         /* Level */
         )
 {
@@ -666,7 +666,7 @@ EApiGPIOSetLevel(
     EAPI_CHECK_INITIALIZED(EApiGPIOSetLevel);
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiGPIOSetLevel, Bitmask);
 
-   StatusCode=EApiGPIOSetLevelEmul(Id, Bitmask, Level);
+    StatusCode=EApiGPIOSetLevelEmul(Id, Bitmask, Level);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -676,8 +676,8 @@ EAPI_CALLTYPE
 EApiGPIOGetDirection(
         __IN  EApiId_t Id          , /* GPIO Id */
         __IN  uint32_t Bitmask     , /* Bit mask of Affected
-                                          * Bits
-                                          */
+                                                  * Bits
+                                                  */
         __OUT uint32_t *pDirection   /* Current Direction */
         )
 {
@@ -686,7 +686,7 @@ EApiGPIOGetDirection(
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiGPIOGetDirection, Bitmask);
     EAPI_LIB_ASSERT_PARAMATER_NULL(EApiGPIOGetDirection, pDirection);
 
-  StatusCode=EApiGPIOGetDirectionEmul(Id, Bitmask, pDirection);
+    StatusCode=EApiGPIOGetDirectionEmul(Id, Bitmask, pDirection);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -696,8 +696,8 @@ EAPI_CALLTYPE
 EApiGPIOSetDirection(
         __IN  EApiId_t Id          , /* GPIO Id */
         __IN  uint32_t Bitmask     , /* Bit mask of Affected
-                                          * Bits
-                                          */
+                                                  * Bits
+                                                  */
         __IN  uint32_t Direction     /* Direction */
         )
 {
@@ -705,7 +705,7 @@ EApiGPIOSetDirection(
     EAPI_CHECK_INITIALIZED(EApiGPIOSetDirection);
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiGPIOSetDirection, Bitmask);
 
-   StatusCode=EApiGPIOSetDirectionEmul(Id, Bitmask, Direction);
+    StatusCode=EApiGPIOSetDirectionEmul(Id, Bitmask, Direction);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -715,11 +715,11 @@ EAPI_CALLTYPE
 EApiGPIOGetDirectionCaps(
         __IN     EApiId_t Id        , /* GPIO Id */
         __OUTOPT uint32_t *pInputs  , /* Supported GPIO Input
-                                           * Bit Mask
-                                           */
+                                                   * Bit Mask
+                                                   */
         __OUTOPT uint32_t *pOutputs   /* Supported GPIO Output
-                                           * Bit Mask
-                                           */
+                                                   * Bit Mask
+                                                   */
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
@@ -737,7 +737,7 @@ EApiGPIOGetDirectionCaps(
     if(pOutputs==NULL)
         pOutputs=&DpBuffer;
 
-  StatusCode=EApiGPIOGetDirectionCapsEmul(Id, pInputs, pOutputs);
+    StatusCode=EApiGPIOGetDirectionCapsEmul(Id, pInputs, pOutputs);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -761,8 +761,8 @@ EApiLibInitialize(void)
     StatusCode = EApiInitLib();
     if (StatusCode == EAPI_STATUS_SUCCESS )
     {
-            Initialized=1;
-            EAPI_LIB_RETURN_SUCCESS(EApiLibInitialize, "");
+        Initialized=1;
+        EAPI_LIB_RETURN_SUCCESS(EApiLibInitialize, "");
     }
     else
     {
@@ -782,7 +782,7 @@ EApiLibUnInitialize(void)
     EAPI_CHECK_INITIALIZED(EApiLibUnInitialize);
     EApiUninitLib();
     Initialized=0;
-   EAPI_LIB_RETURN_SUCCESS(EApiLibUnInitialize, "");
+    EAPI_LIB_RETURN_SUCCESS(EApiLibUnInitialize, "");
     EAPI_LIB_ASSERT_EXIT
 
             return StatusCode;
@@ -803,17 +803,17 @@ EApiStatus_t
 EAPI_CALLTYPE
 EApiWDogGetCap(
         __OUTOPT uint32_t *pMaxDelay       ,/* Maximum Supported
-                                                 * Delay in milliseconds
-                                                 */
+                                                         * Delay in milliseconds
+                                                         */
         __OUTOPT uint32_t *pMaxEventTimeout,/* Maximum Supported
-                                                 * Event Timeout in
-                                                 * milliseconds
-                                                 * 0 == Unsupported
-                                                 */
+                                                         * Event Timeout in
+                                                         * milliseconds
+                                                         * 0 == Unsupported
+                                                         */
         __OUTOPT uint32_t *pMaxResetTimeout /* Maximum Supported
-                                                 * Reset Timeout in
-                                                 * milliseconds
-                                                 */
+                                                         * Reset Timeout in
+                                                         * milliseconds
+                                                         */
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
@@ -840,16 +840,16 @@ EAPI_CALLTYPE
 EApiWDogStart(
         __IN  uint32_t Delay       , /* Delay in milliseconds */
         __IN  uint32_t EventTimeout, /* Event Timeout in
-                                          * milliseconds
-                                          */
+                                                  * milliseconds
+                                                  */
         __IN  uint32_t ResetTimeout  /* Reset Timeout in
-                                          * milliseconds
-                                          */
+                                                  * milliseconds
+                                                  */
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-   EAPI_CHECK_INITIALIZED(EApiWDogStart);
-  StatusCode=EApiWDogStartEmul(Delay, EventTimeout, ResetTimeout);
+    EAPI_CHECK_INITIALIZED(EApiWDogStart);
+    StatusCode=EApiWDogStartEmul(Delay, EventTimeout, ResetTimeout);
 
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
@@ -860,7 +860,7 @@ EApiWDogTrigger(void)
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EAPI_CHECK_INITIALIZED(EApiWDogTrigger);
-   StatusCode=EApiWDogTriggerEmul();
+    StatusCode=EApiWDogTriggerEmul();
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -906,7 +906,7 @@ EApiStorageCap(
     if(pBlockLength==NULL)
         pBlockLength=&DummyValue;
 
-   StatusCode=EApiStorageCapEmul(Id, pStorageSize, pBlockLength);
+    StatusCode=EApiStorageCapEmul(Id, pStorageSize, pBlockLength);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
@@ -975,8 +975,307 @@ EApiStorageAreaWrite(
     EAPI_LIB_ASSERT_PARAMATER_NULL(EApiStorageAreaWrite, pBuffer);
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiStorageAreaWrite, ByteCnt);
 
-  StatusCode=EApiStorageAreaWriteEmul(Id, Offset, pBuffer, ByteCnt);
+    StatusCode=EApiStorageAreaWriteEmul(Id, Offset, pBuffer, ByteCnt);
     EAPI_LIB_ASSERT_EXIT
             return StatusCode;
 }
 
+/*
+ *
+ *
+ *
+ *  P U L S E   W I T H   M O D U L A T I O N
+ *
+ *
+ *
+ */
+EApiStatus_t 
+EAPI_CALLTYPE
+EApiExPwmGetCaps(
+        __IN     EApiId_t Id                       , /* PWM Channel Id */
+        __OUT    uint32_t *pPwmMinPeriod           , /* Minimum Supported
+                                                             * period time in nanoseconds
+                                                             */
+        __OUT    uint32_t *pPwmMaxPeriod           , /* Maximum Supported
+                                                             * period time in
+                                                             * nanoseconds
+                                                             */
+        __OUT    uint32_t *pPwmMinGranularity      , /* Minimum Supported
+                                                             * granularity in
+                                                             * nanoseconds
+                                                             */
+        __OUT    uint32_t *pPwmMaxGranularity      , /* Maximum Supported
+                                                             * granularity in
+                                                             * nanoseconds
+                                                             */
+        __OUT    EApiId_t *pPwmCompanionChannelId  , /* Companion Channel Id
+                                                             */
+        __INOUT  uint32_t *pPwmFeatureFlags         /* Feature Flags for
+                                     *  selected PWM channel
+                                     */
+        )
+{
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+
+    EAPI_CHECK_INITIALIZED(EApiExPwmGetCaps);
+
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmGetCaps, pPwmMinPeriod);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmGetCaps, pPwmMaxPeriod);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmGetCaps, pPwmMinGranularity);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmGetCaps, pPwmMaxGranularity);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmGetCaps, pPwmFeatureFlags);
+
+    StatusCode = EApiExPwmGetCapsEmul(Id, pPwmMinPeriod, pPwmMaxPeriod, pPwmMinGranularity,
+                                      pPwmMaxGranularity, pPwmCompanionChannelId,
+                                      pPwmFeatureFlags);
+
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+        EAPI_LIB_RETURN_SUCCESS(EApiExPwmGetCaps, "");
+    else
+        EAPI_LIB_RETURN_ERROR(
+                    EApiExPwmGetCaps,
+                    StatusCode,
+                    "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
+}
+
+EApiStatus_t
+EAPI_CALLTYPE 
+EApiExPwmGetConfig(
+        __IN      EApiId_t Id               ,
+        __OUTOPT  uint32_t *pPwmPeriod      ,
+        __OUTOPT  uint32_t *pPwmDutyCycle   ,
+        __OUTOPT  uint32_t *pPwmPolarity    ,
+        __OUTOPT  uint32_t *pPwmFeatureFlags,
+        __OUTOPT  uint32_t *pPwmEnable      ,
+        __OUTOPT  uint32_t *pPwmGranularity
+        )
+{
+    EApiStatus_t StatusCode = EAPI_STATUS_SUCCESS;
+
+    EAPI_CHECK_INITIALIZED(EApiExPwmGetConfig);
+
+    if((Id != EAPIEX_ID_PWM_CHANNEL_0) && (Id != EAPIEX_ID_PWM_CHANNEL_1))
+        EAPI_LIB_RETURN_ERROR(
+                    EApiLibInitialize,
+                    EAPI_STATUS_UNSUPPORTED   ,
+                    "Channel Id is not supported."
+                    );
+
+    StatusCode = EApiExPwmGetConfigEmul(Id, pPwmPeriod, pPwmDutyCycle, pPwmPolarity,
+                                        pPwmFeatureFlags, pPwmEnable, pPwmGranularity);
+
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+        EAPI_LIB_RETURN_SUCCESS(EApiExPwmGetConfig, "");
+    else
+        EAPI_LIB_RETURN_ERROR(
+                    EApiExPwmGetConfig,
+                    StatusCode,
+                    "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
+}
+
+EApiStatus_t
+EAPI_CALLTYPE 
+EApiExPwmSetConfig(
+        __IN      EApiId_t Id               ,
+        __INOUT   uint32_t *pPwmPeriod      ,
+        __INOUT   uint32_t *pPwmDutyCycle   ,
+        __IN      uint32_t *pPwmPolarity    ,
+        __INOUT   uint32_t *pPwmFeatureFlags,
+        __INOPT   uint32_t *pPwmMinSteps    ,
+        __INOPT   uint32_t *pPwmMaxSteps    ,
+        __IN      uint32_t *pPwmEnable      ,
+        __OUT     uint32_t *pPwmGranularity
+        )
+{
+    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
+
+    EAPI_CHECK_INITIALIZED(EApiExPwmSetConfig);
+
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmSetConfig, pPwmPeriod);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmSetConfig, pPwmDutyCycle);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmSetConfig, pPwmPolarity);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmSetConfig, pPwmFeatureFlags);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmSetConfig, pPwmEnable);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmSetConfig, pPwmGranularity);
+
+    EAPI_LIB_ASSERT_PARAMATER_CHECK(EApiExPwmSetConfig,
+                                    (*pPwmDutyCycle > *pPwmPeriod),
+                                    "Duty Cycle > Period!");
+
+    /* 16Bit only supported on channel 0 */
+    if ((Id != EAPIEX_ID_PWM_CHANNEL_0) && (*pPwmFeatureFlags & EAPIEX_PWM_FEATURE_16BIT))
+        return (EAPI_STATUS_UNSUPPORTED);
+
+    StatusCode = EApiExPwmSetConfigEmul(Id, pPwmPeriod, pPwmDutyCycle, pPwmPolarity,
+                                    pPwmFeatureFlags,pPwmMinSteps , pPwmMaxSteps,
+                                    pPwmEnable, pPwmGranularity);
+
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+        EAPI_LIB_RETURN_SUCCESS(EApiExPwmSetConfig, "");
+    else
+        EAPI_LIB_RETURN_ERROR(
+                    EApiExPwmSetConfig,
+                    StatusCode,
+                    "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return (StatusCode);
+}
+
+EApiStatus_t
+EAPI_CALLTYPE 
+EApiExPwmGetDuty (
+        __IN    EApiId_t Id             ,
+        __OUT    uint32_t *pPwmDutyCycle
+        )
+{
+    EApiStatus_t StatusCode = EAPI_STATUS_SUCCESS;
+
+    EAPI_CHECK_INITIALIZED(EApiExPwmGetDuty);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmGetDuty, pPwmDutyCycle);
+
+    StatusCode = EApiExPwmGetDutyEmul(Id, pPwmDutyCycle);
+
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+        EAPI_LIB_RETURN_SUCCESS(EApiExPwmGetDuty, "");
+    else
+        EAPI_LIB_RETURN_ERROR(
+                    EApiExPwmGetDuty,
+                    StatusCode,
+                    "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return (StatusCode);
+}
+
+EApiStatus_t
+EAPI_CALLTYPE 
+EApiExPwmSetDuty (
+        __IN    EApiId_t Id             ,
+        __IN   uint32_t PwmDutyCycle
+        )
+{
+    EApiStatus_t StatusCode = EAPI_STATUS_SUCCESS;
+    EAPI_CHECK_INITIALIZED(EApiExPwmSetDuty);
+
+    StatusCode = EApiExPwmSetDutyEmul(Id, PwmDutyCycle);
+
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+        EAPI_LIB_RETURN_SUCCESS(EApiExPwmSetDuty, "");
+    else
+        EAPI_LIB_RETURN_ERROR(
+                    EApiExPwmSetDuty,
+                    StatusCode,
+                    "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return (StatusCode);
+}  
+
+EApiStatus_t
+EAPI_CALLTYPE 
+EApiExPwmGetEnable (
+        __IN    EApiId_t Id         ,
+        __OUT   uint32_t *pPwmEnable
+        )
+{
+    EApiStatus_t StatusCode = EAPI_STATUS_SUCCESS;
+
+    EAPI_CHECK_INITIALIZED(EApiExPwmGetEnable);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmGetEnable, pPwmEnable);
+
+    StatusCode = EApiExPwmGetEnableEmul(Id, pPwmEnable);
+
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+        EAPI_LIB_RETURN_SUCCESS(EApiExPwmGetEnable, "");
+    else
+        EAPI_LIB_RETURN_ERROR(
+                    EApiExPwmGetEnable,
+                    StatusCode,
+                    "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return (StatusCode);
+}
+
+EApiStatus_t
+EAPI_CALLTYPE 
+EApiExPwmSetEnable (
+        __IN    EApiId_t Id         ,
+        __IN    uint32_t PwmEnable
+        )
+{
+    EApiStatus_t StatusCode = EAPI_STATUS_SUCCESS;
+
+    EAPI_CHECK_INITIALIZED(EApiExPwmSetEnable);
+
+    StatusCode = EApiExPwmSetEnableEmul(Id, PwmEnable);
+
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+        EAPI_LIB_RETURN_SUCCESS(EApiExPwmSetEnable, "");
+    else
+        EAPI_LIB_RETURN_ERROR(
+                    EApiExPwmSetEnable,
+                    StatusCode,
+                    "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return (StatusCode);
+}
+
+EApiStatus_t
+EAPI_CALLTYPE 
+EApiExPwmGetPolarity (
+        __IN    EApiId_t Id           ,
+        __OUT   uint32_t *pPwmPolarity
+        )
+{
+    EApiStatus_t StatusCode = EAPI_STATUS_SUCCESS;
+
+    EAPI_CHECK_INITIALIZED(EApiExPwmGetPolarity);
+    EAPI_LIB_ASSERT_PARAMATER_NULL (EApiExPwmGetPolarity, pPwmPolarity);
+
+    StatusCode =  EApiExPwmGetPolarityEmul(Id, pPwmPolarity);
+
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+        EAPI_LIB_RETURN_SUCCESS(EApiExPwmGetPolarity, "");
+    else
+        EAPI_LIB_RETURN_ERROR(
+                    EApiExPwmGetPolarity,
+                    StatusCode,
+                    "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return (StatusCode);
+}  
+
+EApiStatus_t
+EAPI_CALLTYPE 
+EApiExPwmSetPolarity (
+        __IN    EApiId_t Id           ,
+        __IN    uint32_t PwmPolarity
+        )
+{
+    EApiStatus_t StatusCode = EAPI_STATUS_SUCCESS;
+
+    EAPI_CHECK_INITIALIZED(EApiExPwmSetPolarity);
+
+    StatusCode = EApiExPwmSetPolarityEmul(Id, PwmPolarity);
+
+    if (StatusCode == EAPI_STATUS_SUCCESS )
+        EAPI_LIB_RETURN_SUCCESS(EApiExPwmSetPolarity, "");
+    else
+        EAPI_LIB_RETURN_ERROR(
+                    EApiExPwmSetPolarity,
+                    StatusCode,
+                    "");
+
+    EAPI_LIB_ASSERT_EXIT
+            return StatusCode;
+}

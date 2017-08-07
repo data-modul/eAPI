@@ -28,6 +28,26 @@ extern unsigned int gpioLines;
 extern int gpiofd;
 extern int gpioEnabled;
 
+/* PWM  */
+typedef struct _PWM_CONFIG
+{
+	uint8_t   initialized;
+    uint8_t   exported;
+	uint8_t   enabled;
+    uint8_t   mode;
+	uint8_t   alignment;
+	uint8_t   polarity;
+	uint16_t  period;
+	uint16_t  duty;
+    uint32_t  granularity;
+} PWM_HW_CONFIG;
+
+extern PWM_HW_CONFIG  pwmChannel[2];
+extern char *pathPwmChannel0;
+extern char *pathPwmChannel1;
+extern char *pathPwmConfigure;
+extern char *pwmchip;
+/* end PWM */
 
 
 /*

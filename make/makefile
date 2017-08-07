@@ -149,6 +149,7 @@ OBJECTS=EApiEmulGPIO.o \
       EApiEmulWDT.o \
       EApiOsNIX.o \
       EApiEmulEeprom.o \
+      EApiExtEmulPWM.o \
       EApiAPI.o DbgChk.o
 
 DefaultTgt: buildall
