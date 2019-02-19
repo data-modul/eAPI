@@ -120,19 +120,9 @@ EApiI2CWriteReadEmul(
 
     i2cbus = Id;
 
-    if((Addr & 0x80) == 0x80){ //10bit addr
-        EAPI_LIB_RETURN_ERROR(
-                    EApiI2CWriteReadEmul,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "10Bit Address is not supported"
-                    );
-    /*    LclAddr=Addr<<8;
-        LclAddr|=*((uint8_t *)pWBuffer);
-        pWBuffer=((uint8_t *)pWBuffer)+1;
-        WriteBCnt--;*/
-    }
-    else
-        LclAddr=Addr;
+    /* EAPI specification expects 8bit address from user, which should be 
+     * shifted one bit to have 7bit address */
+     LclAddr=EAPI_I2C_DEC_7BIT_ADDR(Addr);
 
 #if (STRICT_VALIDATION>1)
     siFormattedMessage_M2(
@@ -436,19 +426,9 @@ EApiI2CWriteReadEmulUniversal(
 
     i2cbus = Id;
 
-    if((Addr & 0x80) == 0x80){ //10bit addr
-        EAPI_LIB_RETURN_ERROR(
-                    EApiI2CWriteReadEmulUniversal,
-                    EAPI_STATUS_UNSUPPORTED  ,
-                    "10Bit Address is not supported"
-                    );
-  /*      LclAddr=Addr<<8;
-        LclAddr|=*((uint8_t *)pWBuffer);
-        pWBuffer=((uint8_t *)pWBuffer)+1;
-        WriteBCnt--; */
-    }
-    else
-        LclAddr=Addr;
+    /* EAPI specification expects 8bit address from user, which should be 
+     * shifted one bit to have 7bit address */
+     LclAddr=EAPI_I2C_DEC_7BIT_ADDR(Addr);
 
 #if (STRICT_VALIDATION>1)
     siFormattedMessage_M2(
