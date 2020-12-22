@@ -68,8 +68,15 @@ EApiStorageCapEmul (
                     "Unrecognised Storage ID"
                     );
 
-    eeprom_bus = find_eeprom();
-    eeprom_userSpaceBuf = eeprom_userSpace();
+    if (eeprom_bus < 0)
+    {
+        find_eeprom();
+    }
+
+    if (eeprom_bus >= 0 && eeprom_userSpaceBuf == NULL) 
+    {
+        eeprom_userSpaceBuf = eeprom_userSpace();
+    }
     
     /* find vendor specific block of Eeprom */
     if (eeprom_userSpaceBuf == NULL || userspaceBuffer_Cmd == -1)
@@ -113,6 +120,8 @@ EApiStorageAreaReadEmul(
         )
 {
     uint32_t storageSize = 0;
+    uint32_t Cmd = 0;
+    uint32_t CmdSize = 1;
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
 
     if(Id != EAPI_ID_STORAGE_STD)
@@ -153,7 +162,8 @@ EApiStorageAreaReadEmul(
                 "Read Len extends beyond End of Storage Area"
                 );
 
-    StatusCode = EApiI2CReadTransfer(eeprom_bus,EEPROM_DEVICE,EAPI_I2C_ENC_EXT_CMD(userspaceBuffer_Cmd+6+Offset), pvBuffer,ByteCnt,ByteCnt);
+    /* userspaceBuffer_Cmd is already encoded to extended command by fill_eepromBuffer*/
+    StatusCode = EApiI2CReadTransfer(eeprom_bus,EEPROM_DEVICE, userspaceBuffer_Cmd+6+Offset, pvBuffer,ByteCnt,ByteCnt);
     if(!EAPI_TEST_SUCCESS(StatusCode))
         EAPI_LIB_RETURN_ERROR(
                     EApiStorageAreaReadEmul        ,
@@ -161,6 +171,14 @@ EApiStorageAreaReadEmul(
                     "Reading User space Failed"
                     );
 
+    /* try to set eeprom pointer back to 0 */
+    if(userspaceBuffer_Cmd & EAPI_I2C_EXT_CMD)
+    {
+        Cmd = EAPI_I2C_ENC_EXT_CMD(Cmd);
+        CmdSize++;
+    }
+    EApiI2CWriteReadEmul(eeprom_bus, EEPROM_DEVICE, &Cmd, CmdSize+1, CmdSize, NULL, 0);       
+        
     EAPI_LIB_RETURN_SUCCESS(EApiStorageAreaRead, "");
 
     EAPI_LIB_ASSERT_EXIT
@@ -178,6 +196,8 @@ EApiStorageAreaWriteEmul(
     uint32_t storageSize = 0;
     uint32_t new_Offset = 0;
     uint32_t iWrite=0;
+    uint32_t Cmd = 0;
+    uint32_t CmdSize = 1;
 
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
 
@@ -235,7 +255,8 @@ EApiStorageAreaWriteEmul(
     new_Offset = userspaceBuffer_Cmd + 6 + Offset;
     while(iWrite < ByteCnt)
     {
-        StatusCode = EApiI2CWriteTransfer(eeprom_bus,EEPROM_DEVICE,EAPI_I2C_ENC_EXT_CMD(new_Offset), &pvBuffer[iWrite],1);
+        /* userspaceBuffer_Cmd is already encoded to extended command by fill_eepromBuffer*/
+        StatusCode = EApiI2CWriteTransfer(eeprom_bus,EEPROM_DEVICE, new_Offset, &pvBuffer[iWrite],1);
         if(!EAPI_TEST_SUCCESS(StatusCode))
             EAPI_LIB_RETURN_ERROR(
                         EApiStorageAreaWriteEmul        ,
@@ -247,8 +268,13 @@ EApiStorageAreaWriteEmul(
         usleep(5000);
     }
 
-
-
+    /* try to set eeprom pointer back to 0 */
+    if(userspaceBuffer_Cmd & EAPI_I2C_EXT_CMD)
+    {
+        Cmd = EAPI_I2C_ENC_EXT_CMD(Cmd);
+        CmdSize++;
+    }
+    EApiI2CWriteReadEmul(eeprom_bus, EEPROM_DEVICE, &Cmd, CmdSize+1, CmdSize, NULL, 0);       
 
     EAPI_LIB_RETURN_SUCCESS(EApiStorageAreaWriteEmul, "");
 
