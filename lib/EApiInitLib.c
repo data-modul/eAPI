@@ -384,9 +384,11 @@ EApiInitLib(){
              LIB_VERSION, LIB_REVISION, LIB_BUILD
              );
     /* ******************** EEPROM ************************** */
-    eeprom_bus = find_eeprom();
+    /* don't touch the EEPROM from EApiLibInitialize! */
+
     /* ******************** USER SPACE EEPROM ************************** */
-    eeprom_userSpaceBuf = eeprom_userSpace();
+    /* don't touch the EEPROM from EApiLibInitialize! */
+
 
     /* ******************** ACPI-HWMON ************************** */
     acpiHwmonName = NULL;

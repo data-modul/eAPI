@@ -68,6 +68,9 @@ EApiStorageCapEmul (
                     "Unrecognised Storage ID"
                     );
 
+    eeprom_bus = find_eeprom();
+    eeprom_userSpaceBuf = eeprom_userSpace();
+    
     /* find vendor specific block of Eeprom */
     if (eeprom_userSpaceBuf == NULL || userspaceBuffer_Cmd == -1)
         EAPI_LIB_RETURN_ERROR(
