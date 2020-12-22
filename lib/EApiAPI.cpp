@@ -103,7 +103,9 @@ EApiI2CWriteReadRaw(
 
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EApiStatus_t ErrorCode2 = EAPI_STATUS_SUCCESS;
-    
+	uint8_t Probe = 0;
+	
+	if(WriteBCnt==1) Probe = 1;
     if(WriteBCnt) WriteBCnt--;
     if(ReadBCnt) ReadBCnt--;
     
@@ -144,7 +146,7 @@ EApiI2CWriteReadRaw(
                 );
     EAPI_LIB_ASSERT_PARAMATER_CHECK(
                 EApiI2CWriteReadRaw,
-                ((WriteBCnt==0)&&(ReadBCnt==0)),
+                ((WriteBCnt==0)&&(ReadBCnt==0)&&(Probe==0)),
                 "NO READ NO WRITE"
                 );
     EAPI_LIB_PREVENT_BUF_OVERFLOW(
