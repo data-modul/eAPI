@@ -62,7 +62,7 @@ int Initialized=0;
  *
  *
  */
-uint32_t 
+EApiStatus_t 
 EAPI_CALLTYPE
 EApiI2CGetBusCap(
         __IN  EApiId_t  Id         , /* I2C Bus Id */
@@ -81,109 +81,32 @@ EApiI2CGetBusCap(
             return StatusCode;
 }
 
-EApiStatus_t
-EAPI_CALLTYPE 
-EApiI2CWriteReadRawSpecific(
-        __IN     EApiId_t  Id       , /* I2C Bus Id */
-        __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
-                                                   * Device Address
-                                                   */
-        __INOPT  void     *pWBuffer , /* Write Data pBuffer */
-        __IN     uint32_t  WriteBCnt, /* Number of Bytes to write */
-        __IN     uint32_t  CmdBCnt, /* Number of Cmd Bytes to write */
-        __OUTOPT void     *pRBuffer , /* Read Data pBuffer */
-        __IN     uint32_t  RBufLen  , /* Data pBuffer Length */
-        __IN     uint32_t  ReadBCnt   /* Number of Bytes to
-                                                   * Read
-                                                   */
-        )
-{
-
-    EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
-    EApiStatus_t ErrorCode2 = EAPI_STATUS_SUCCESS;
-    EAPI_CHECK_INITIALIZED(EApiI2CWriteReadRawSpecific);
-
-    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-                EApiI2CWriteReadRawSpecific,
-                (WriteBCnt>1)&&(pWBuffer==NULL),
-                "pWBuffer is NULL"
-                );
-#if (STRICT_VALIDATION>1)
-    siFormattedMessage_M2(
-                'L'                   ,
-                __FILE__              ,
-                "EApiI2CWriteReadRawSpecific",
-                __LINE__              ,
-                "Info"                ,
-                "ADDR=%02"PRIX8" WriteBCnt=%04"PRIX32
-                " RBufLen=%04"PRIX32" WriteBCnt=%04"PRIX32
-                " ReadBCnt=%04"PRIX32"\n",
-                Addr, WriteBCnt, RBufLen, WriteBCnt, ReadBCnt
-                );
-#endif
-    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-                EApiI2CWriteReadRawSpecific,
-                (ReadBCnt>1)&&(pRBuffer==NULL) ,
-                "pRBuffer is NULL"
-                );
-
-    //    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-    //                EApiI2CWriteReadRaw,
-    //                (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
-    //                "pRBuffer is NULL"
-    //                );
-    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-                EApiI2CWriteReadRawSpecific,
-                (ReadBCnt>1)&&(RBufLen==0) ,
-                "RBufLen is ZERO"
-                );
-    EAPI_LIB_ASSERT_PARAMATER_CHECK(
-                EApiI2CWriteReadRawSpecific,
-                ((WriteBCnt==0)&&(ReadBCnt==0)),
-                "NO READ NO WRITE"
-                );
-    EAPI_LIB_PREVENT_BUF_OVERFLOW(
-                EApiI2CWriteReadRawSpecific,
-                ReadBCnt,
-                RBufLen+1
-                );
-    ErrorCode2=EApiI2CWriteReadEmul(
-                Id,
-                Addr,
-                pWBuffer,
-                WriteBCnt,
-                CmdBCnt,
-                pRBuffer,
-                ReadBCnt
-                );
-
-    if(ErrorCode2!=EAPI_STATUS_SUCCESS)
-        StatusCode=ErrorCode2;
-    EAPI_LIB_ASSERT_EXIT
-            return StatusCode;
-}
 
 EApiStatus_t
 EAPI_CALLTYPE
 EApiI2CWriteReadRaw(
         __IN     EApiId_t  Id       , /* I2C Bus Id */
         __IN     uint8_t   Addr     , /* Encoded 7Bit I2C
-                                                   * Device Address
-                                                   */
+                                       * Device Address
+                                       */
         __INOPT  void     *pWBuffer , /* Write Data pBuffer */
         __IN     uint32_t  WriteBCnt, /* Number of Bytes to
-                                                   * write
-                                                   */
+                                       * write plus 1
+                                       */
         __OUTOPT void     *pRBuffer , /* Read Data pBuffer */
         __IN     uint32_t  RBufLen  , /* Data pBuffer Length */
         __IN     uint32_t  ReadBCnt   /* Number of Bytes to
-                                                   * Read
-                                                   */
+                                       * Read plus 1
+                                       */
         )
 {
 
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     EApiStatus_t ErrorCode2 = EAPI_STATUS_SUCCESS;
+    
+    if(WriteBCnt) WriteBCnt--;
+    if(ReadBCnt) ReadBCnt--;
+    
     EAPI_CHECK_INITIALIZED(EApiI2CWriteReadRaw);
 
     EAPI_LIB_ASSERT_PARAMATER_CHECK(
@@ -209,7 +132,6 @@ EApiI2CWriteReadRaw(
                 (ReadBCnt>1)&&(pRBuffer==NULL) ,
                 "pRBuffer is NULL"
                 );
-
     //    EAPI_LIB_ASSERT_PARAMATER_CHECK(
     //                EApiI2CWriteReadRaw,
     //                (ReadBCnt>1)&&(pRBuffer==NULL)&&(RBufLen==0) ,
@@ -230,7 +152,8 @@ EApiI2CWriteReadRaw(
                 ReadBCnt,
                 RBufLen+1
                 );
-    ErrorCode2=EApiI2CWriteReadEmulUniversal(
+	
+    ErrorCode2=EApiI2CWriteReadRawEmul(
                 Id,
                 Addr,
                 pWBuffer,
@@ -241,8 +164,9 @@ EApiI2CWriteReadRaw(
 
     if(ErrorCode2!=EAPI_STATUS_SUCCESS)
         StatusCode=ErrorCode2;
+
     EAPI_LIB_ASSERT_EXIT
-            return StatusCode;
+        return StatusCode;
 }
 
 
@@ -251,10 +175,10 @@ EAPI_CALLTYPE
 EApiI2CReadTransfer(
         __IN  EApiId_t  Id      , /* I2C Bus Id */
         __IN  uint32_t  Addr    , /* Encoded 7/10Bit I2C
-                                               * Device Address
-                                               */
+                                   * Device Address
+                                   */
         __IN  uint32_t  Cmd     , /* I2C Command/Offset */
-        __OUT void *pBuffer , /* Transfer Data pBuffer */
+        __OUT void *pBuffer     , /* Transfer Data pBuffer */
         __IN  uint32_t  BufLen  , /* Data pBuffer Length */
         __IN  uint32_t  ByteCnt   /* Byte Count to read */
         )
@@ -285,7 +209,6 @@ EApiI2CReadTransfer(
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiI2CReadTransfer, BufLen );
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiI2CReadTransfer, ByteCnt);
     EAPI_LIB_ASSERT_PARAMATER_ZERO(EApiI2CReadTransfer, BufLen );
-
 
 #if (STRICT_VALIDATION>1)
     EApiI2CGetBusCap(Id, &MaxBlkLen);
@@ -318,18 +241,18 @@ EApiI2CReadTransfer(
         LclpBuffer[LclByteCnt++]=(uint8_t)(Cmd&0xFF);
         LclCmdBcnt++;
     }
-    StatusCode=EApiI2CWriteReadRawSpecific(
+    StatusCode=EApiI2CWriteReadEmul(
                 Id,
                 (uint8_t)Addr,
                 LclpBuffer,
                 LclByteCnt+1,
                 LclCmdBcnt,
                 pBuffer,
-                BufLen,
                 ByteCnt+1
                 );
+
     EAPI_LIB_ASSERT_EXIT
-            return StatusCode;
+        return StatusCode;
 }
 
 EApiStatus_t 
@@ -337,10 +260,10 @@ EAPI_CALLTYPE
 EApiI2CWriteTransfer(
         __IN  EApiId_t  Id      , /* I2C Bus Id */
         __IN  uint32_t  Addr    , /* Encoded 7/10Bit I2C
-                                               * Device Address
-                                               */
+                                   * Device Address
+                                   */
         __IN  uint32_t  Cmd     , /* I2C Command/Offset */
-        __IN  void *pBuffer , /* Transfer Data pBuffer */
+        __IN  void     *pBuffer , /* Transfer Data pBuffer */
         __IN  uint32_t  ByteCnt   /* Byte Count to write */
         )
 {
@@ -428,21 +351,21 @@ EApiI2CWriteTransfer(
                 );
 #endif
 
-    StatusCode=EApiI2CWriteReadRawSpecific(
+    StatusCode=EApiI2CWriteReadEmul(
                 Id,
                 (uint8_t)Addr,
                 pLclBuffer,
                 LclByteCnt+ByteCnt+1,
                 LclCmdBcnt,
                 NULL,
-                0,
                 0
                 );
-
+    
     if(LclByteCnt)
         free(pLclBuffer);
+
     EAPI_LIB_ASSERT_EXIT
-            return StatusCode;
+        return StatusCode;
 }
 
 EApiStatus_t 
@@ -450,19 +373,28 @@ EAPI_CALLTYPE
 EApiI2CProbeDevice(
         __IN  EApiId_t  Id   , /* I2C Bus Id */
         __IN  uint32_t  Addr   /* Encoded 7/10Bit
-                                            * I2C Device Address
-                                            */
+                                * I2C Device Address
+                                */
         )
 {
     EApiStatus_t StatusCode=EAPI_STATUS_SUCCESS;
     uint8_t LclpBuffer[8]={0};
     int LclByteCnt=0;
-    EAPI_CHECK_INITIALIZED(EApiI2CWriteTransfer);
+
+    EAPI_CHECK_INITIALIZED(EApiI2CProbeDevice);
+
     if(EAPI_I2C_IS_10BIT_ADDR(Addr))
     {
-        LclpBuffer[LclByteCnt++]=(uint8_t)(Addr&0xFF);
-        Addr>>=8;
+        EAPI_LIB_RETURN_ERROR(
+                    EApiI2CProbeDevice,
+                    EAPI_STATUS_UNSUPPORTED  ,
+                    "10Bit Address is not supported"
+                    );
+
+        /* LclpBuffer[LclByteCnt++]=(uint8_t)(Addr&0xFF);
+        Addr>>=8;*/
     }
+
     StatusCode=EApiI2CWriteReadRaw(
                 Id,
                 (uint8_t)Addr,
@@ -472,11 +404,14 @@ EApiI2CProbeDevice(
                 0,
                 0
                 );
+
     if(StatusCode==EAPI_STATUS_WRITE_ERROR)
         StatusCode=EAPI_STATUS_NOT_FOUND;
+
     EAPI_LIB_ASSERT_EXIT
-            return StatusCode;
+        return StatusCode;
 }
+
 /*
  *
  *
@@ -927,7 +862,7 @@ EApiStorageAreaRead(
     siFormattedMessage_M2(
                 'L'                   ,
                 __FILE__              ,
-                "EApiI2CWriteTransfer",
+                "EApiStorageAreaRead",
                 __LINE__              ,
                 "Info"                ,
                 "Id=%08"PRIX32" Offset=%04"PRIX32
@@ -964,7 +899,7 @@ EApiStorageAreaWrite(
     siFormattedMessage_M2(
                 'L'                   ,
                 __FILE__              ,
-                "EApiI2CWriteTransfer",
+                "EApiStorageAreaWrite",
                 __LINE__              ,
                 "Info"                ,
                 "Id=%08"PRIX32" Offset=%04"PRIX32

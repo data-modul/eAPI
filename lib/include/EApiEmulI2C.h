@@ -45,33 +45,39 @@ extern "C" {
 #endif
 
 
-uint32_t
+EApiStatus_t
 EAPI_CALLTYPE EApiI2CGetBusCapEmul(
 	__IN  uint32_t  Id,
 	__OUT uint32_t *pMaxBlkLen
 	);
-uint32_t
+
+
+EApiStatus_t
+EAPI_CALLTYPE
+EApiI2CWriteReadRawEmul(
+        __IN      EApiId_t Id         , /* I2C Bus Id */
+        __IN      uint8_t  Addr       , /* Encoded 7Bit I2C
+                                         * Device Address
+                                         */
+        __INOPT   uint8_t  *pWBuffer  , /* Write Data pBuffer */
+        __IN      uint32_t WriteBCnt  , /* Number of Bytes to write */
+        __OUTOPT  uint8_t  *pRBuffer  , /* Read Data pBuffer */
+        __IN      uint32_t ReadBCnt     /* Number of Bytes to read */
+        );
+
+EApiStatus_t
 EAPI_CALLTYPE
 EApiI2CWriteReadEmul(
-	__IN      uint32_t  Id,
-	__IN      uint8_t   Addr,
-    __INOPT   uint8_t     *pWpBuffer,
-	__IN      uint32_t  WriteBCnt,
-     __IN     uint32_t  CmdBCnt,
-    __OUTOPT  uint8_t     *pRpBuffer,
-	__IN      uint32_t  ReadBCnt
-	);
-
-uint32_t
-EAPI_CALLTYPE
-EApiI2CWriteReadEmulUniversal(
-    __IN      uint32_t  Id,
-    __IN      uint8_t   Addr,
-    __INOPT   uint8_t     *pWpBuffer,
-    __IN      uint32_t  WriteBCnt,
-    __OUTOPT  uint8_t     *pRpBuffer,
-    __IN      uint32_t  ReadBCnt
-    );
+        __IN      EApiId_t Id         , /* I2C Bus Id */
+        __IN      uint8_t  Addr       , /* Encoded 7Bit I2C
+                                         * Device Address
+                                         */
+        __INOPT   uint8_t  *pWBuffer  , /* Write Data pBuffer */
+        __IN      uint32_t WriteBCnt  , /* Number of Bytes to write plus 1 */
+        __IN     uint32_t  CmdBCnt,     /* Number of Cmd Bytes to write */
+        __OUTOPT  uint8_t  *pRBuffer  , /* Read Data pBuffer */
+        __IN      uint32_t ReadBCnt     /* Number of Bytes to read plus 1 */
+        );
 
 #ifdef __cplusplus
 }

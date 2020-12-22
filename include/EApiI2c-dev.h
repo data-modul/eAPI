@@ -26,10 +26,12 @@
 #include <linux/types.h>
 #include <sys/ioctl.h>
 #include <stddef.h>
-
+#include <linux/i2c.h>
+#include <linux/i2c-dev.h>
 
 /* To determine what functionality is present */
 
+ #define I2C_FUNC_I2C                   0x00000001
  #define I2C_FUNC_SMBUS_READ_BYTE       0x00020000
  #define I2C_FUNC_SMBUS_WRITE_BYTE      0x00040000
  #define I2C_FUNC_SMBUS_READ_BYTE_DATA  0x00080000
@@ -39,13 +41,6 @@
 
 
 #define I2C_SMBUS_BLOCK_MAX 32  /* As specified in SMBus standard */
-
-
-union i2c_smbus_data {
- __u8 byte;
- __u16 word;
- __u8 block[I2C_SMBUS_BLOCK_MAX + 2]; /* block[0] is used for length and one more for PEC */
- };
 
 
 #define I2C_SMBUS_READ 1
@@ -80,15 +75,48 @@ union i2c_smbus_data {
 
 #define I2C_SMBUS       0x0720 /* SMBus transfer */
 
+#define CHECK_I2C_FUNC( var, label ) \
+    do { 	if(0 == (var & label)) { \
+    fprintf(stderr, "\nError: " \
+#label " function is required. Program halted.\n\n"); \
+    exit(1); } \
+    } while(0);
 
 
-/* This is the structure as used in the I2C_SMBUS ioctl call */
-struct i2c_smbus_ioctl_data {
-    __u8 read_write;
-    __u8 command;
-    __u32 size;
-    union i2c_smbus_data *data;
-};
+static inline __s32 i2c_access(int file, __u32 LclAddr, __u32 WriteBCnt, __u8 *pWBuffer, __u32 ReadBCnt, __u8 *pRBuffer)
+{
+    int nmsgs, nmsgs_sent;
+    struct i2c_rdwr_ioctl_data rdwr;
+    struct i2c_msg msgs[2];
+
+    
+    if(!ReadBCnt) 
+    {
+        msgs[0].addr = (__u16)(LclAddr & 0xFFFF);
+        msgs[0].flags = 0;
+        msgs[0].len = (__u16)(WriteBCnt & 0xFFFF);
+        msgs[0].buf = pWBuffer;
+        nmsgs = 1;
+    }
+    else 
+    {
+        msgs[0].addr = (__u16)(LclAddr & 0xFFFF);
+        msgs[0].flags = 0;
+        msgs[0].len = (__u16)(WriteBCnt & 0xFFFF);
+        msgs[0].buf = pWBuffer;
+        msgs[1].addr = msgs[0].addr;
+        msgs[1].flags = I2C_M_RD;
+        msgs[1].len = (__u16)(ReadBCnt & 0xFFFF);
+        msgs[1].buf = pRBuffer;                        
+        nmsgs = 2;
+    }
+    
+    rdwr.msgs = msgs;
+    rdwr.nmsgs = nmsgs;
+    nmsgs_sent = ioctl(file, I2C_RDWR, &rdwr);
+    
+    return nmsgs_sent;
+}
 
 static inline __s32 i2c_smbus_access(int file, char read_write, __u8 command,int size, union i2c_smbus_data *data)
 {
@@ -100,7 +128,6 @@ args.size = size;
 args.data = data;
 return ioctl(file,I2C_SMBUS,&args);
 }
-
 
 static inline __s32 i2c_smbus_read_byte(int file)
 {
