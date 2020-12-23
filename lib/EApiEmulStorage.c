@@ -131,6 +131,16 @@ EApiStorageAreaReadEmul(
                     "Unrecognised Storage ID"
                     );
 
+    if (eeprom_bus < 0)
+    {
+        find_eeprom();
+    }
+
+    if (eeprom_bus >= 0 && eeprom_userSpaceBuf == NULL) 
+    {
+        eeprom_userSpaceBuf = eeprom_userSpace();
+    }
+    
     /* find vendor specific block of Eeprom */
     if (eeprom_userSpaceBuf == NULL || userspaceBuffer_Cmd == -1)
         EAPI_LIB_RETURN_ERROR(
@@ -208,6 +218,16 @@ EApiStorageAreaWriteEmul(
                     "Unrecognised Storage ID"
                     );
 
+    if (eeprom_bus < 0)
+    {
+        find_eeprom();
+    }
+
+    if (eeprom_bus >= 0 && eeprom_userSpaceBuf == NULL) 
+    {
+        eeprom_userSpaceBuf = eeprom_userSpace();
+    }
+    
     /* find vendor specific block of Eeprom */
     if (eeprom_userSpaceBuf == NULL || userspaceBuffer_Cmd == -1)
         EAPI_LIB_RETURN_ERROR(
